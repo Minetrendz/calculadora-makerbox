@@ -1,0 +1,755 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d1d1d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Makerbox">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Calculadora Makerbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: barra superior con marca + pestañas; cada pestaña es una sola columna de trabajo, la cotización es una hoja A4 */
+:root{
+  --bg:#f3f1ec; --surface:#ffffff; --ink:#1d1d1d; --muted:#6b675f; --line:#dcd8cf;
+  --cream:#fbf8f0; --accent:#1d1d1d; --accent-ink:#fbf8f0; --good:#2f6b3a; --soft:#ebe8e1;
+  --f-display:'Lora',Georgia,'Times New Roman',serif;
+  --f-body:'Inter',system-ui,-apple-system,'Segoe UI',Arial,sans-serif;
+  --f-num:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141413; --surface:#1e1e1c; --ink:#f1eee7; --muted:#a29d93; --line:#34322e;
+  --accent:#fbf8f0; --accent-ink:#1d1d1d; --good:#7fc28a; --soft:#262523; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141413; --surface:#1e1e1c; --ink:#f1eee7; --muted:#a29d93; --line:#34322e;
+  --accent:#fbf8f0; --accent-ink:#1d1d1d; --good:#7fc28a; --soft:#262523; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:#1d1d1d;color:#fbf8f0}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg.ic{width:40px;height:40px}
+.brand .wm{height:22px;width:auto}
+.brand small{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#bdb8ad;margin-top:2px}
+nav.tabs{display:flex;gap:4px;background:#2a2a28;border-radius:999px;padding:4px}
+nav.tabs button{all:unset;cursor:pointer;padding:7px 16px;border-radius:999px;font-weight:600;font-size:14px;color:#cfcac0}
+nav.tabs button[aria-selected="true"]{background:#fbf8f0;color:#1d1d1d}
+nav.tabs button:focus-visible{outline:2px solid #fbf8f0;outline-offset:2px}
+main{padding-block:28px 60px}
+h2{font-family:var(--f-display);font-weight:600;font-size:26px;margin:0 0 4px;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 22px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px}
+label{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+input[type=number]{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:14px}
+.big-input input,.big-input select{font-size:26px;padding:12px 14px;font-weight:600}
+.unit{position:relative}
+.unit span{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.result{display:grid;grid-template-columns:1.1fr 1fr;gap:16px;margin-top:16px;align-items:start}
+.price-card{background:#1d1d1d;color:#fbf8f0;border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:18px}
+.price-card .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#bdb8ad}
+.price-card .val{font-family:var(--f-display);font-size:56px;font-weight:600;line-height:1}
+.price-card .sub{display:flex;gap:22px;flex-wrap:wrap;border-top:1px solid #3a3936;padding-top:14px}
+.price-card .sub div b{display:block;font-family:var(--f-num);font-size:20px;font-weight:500}
+.price-card .sub div span{font-size:12px;color:#bdb8ad}
+table.bd{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.bd td{padding:7px 0;border-bottom:1px dashed var(--line)}
+table.bd td:last-child{text-align:right;font-family:var(--f-num)}
+table.bd tr.tot td{border-bottom:0;border-top:1px solid var(--ink);font-weight:700;padding-top:10px}
+table.bd td small{color:var(--muted)}
+.bs{margin-top:16px}
+.bs-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.bs-head h3{font-family:var(--f-display);font-size:18px;font-weight:600;margin:0}
+.bs-head h3 span{display:block;font-family:var(--f-body);font-size:12px;font-weight:400;color:var(--muted);margin-top:2px}
+.bs-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.bs-col{min-width:0}
+.bs-lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.bs-val{font-family:var(--f-display);font-size:32px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.bs-val.sm{font-size:22px}
+.bs-rate{font-family:var(--f-num);font-size:12px;color:var(--muted);margin-top:2px}
+.bs-date{font-size:13px;color:var(--muted);margin-top:12px;padding-top:10px;border-top:1px dashed var(--line)}
+.bs-date.warn{color:#b4531c}
+.bs-manual{display:grid;grid-template-columns:200px 1fr;gap:16px;align-items:end;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.bs-in{min-width:0}
+@media (max-width:560px){.bs-manual{grid-template-columns:1fr}.bs-val{font-size:24px}}
+.addq{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:16px}
+.addq > div{flex:1 1 220px;min-width:0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--accent);color:var(--accent-ink);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+/* Ajustes */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.set h3{font-family:var(--f-display);font-size:18px;font-weight:600;margin:0 0 12px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.opts{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px;padding-top:16px;border-top:1px dashed var(--line)}
+.mat-row{display:grid;grid-template-columns:1fr 120px 36px;gap:8px;align-items:center;margin-bottom:8px}
+.icon-btn{all:unset;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:8px;color:var(--muted);border:1px solid var(--line)}
+.icon-btn:hover{color:var(--ink)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px;text-transform:none;letter-spacing:0;font-weight:400}
+.formula{font-family:var(--f-num);font-size:13px;background:var(--soft);border-radius:10px;padding:12px;line-height:1.7;overflow-x:auto}
+/* Cotización */
+.qtools{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.qtools .sp{flex:1}
+.subtabs{display:inline-flex;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:16px}
+.subtabs button{all:unset;cursor:pointer;padding:7px 18px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted)}
+.subtabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.subtabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wa-grid{display:grid;grid-template-columns:280px 1fr;gap:16px;align-items:start}
+.wa-ctl{display:flex;flex-direction:column;gap:16px}
+.wa-out{min-width:0}
+.wa-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.flabel{display:block;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.wa-bar .flabel{margin:0}
+label.chk{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:14px;font-weight:500;color:var(--ink);margin:0 0 6px;cursor:pointer}
+label.chk input{width:auto;accent-color:var(--accent)}
+label.chk small{color:var(--muted);font-weight:400}
+#wa-text{font:14px/1.55 var(--f-body);resize:vertical;min-height:360px}
+@media (max-width:720px){.wa-grid{grid-template-columns:1fr}}
+.qd{display:flex;align-items:center;gap:8px;margin:0}
+.qd input{width:76px;padding:8px 10px}
+.sheet-scroll{overflow-x:auto}
+.sheet{background:#fff;color:#1d1d1d;width:794px;min-height:1123px;margin:0 auto;position:relative;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(0,0,0,.12);font-family:var(--f-body)}
+.sheet input,.sheet textarea{background:transparent;color:#1d1d1d;border:1px dashed transparent;border-radius:6px;padding:2px 4px;width:100%}
+.sheet input:hover,.sheet textarea:hover{border-color:#cfcac0}
+.sheet input:focus,.sheet textarea:focus{outline:none;border-color:#1d1d1d;background:#fbf8f0}
+.s-head{display:flex;justify-content:space-between;align-items:flex-start;padding:48px 52px 0 0}
+.s-logo{display:flex;align-items:center;gap:0;margin-top:44px}
+.s-logo .bar{width:34px;height:42px;background:#1d1d1d;margin-right:10px}
+.s-logo svg{height:50px;width:auto}
+.s-title{text-align:right}
+.s-title h1{font-family:var(--f-body);font-weight:700;font-size:36px;letter-spacing:.02em;margin:0 0 14px}
+.s-title p{margin:0;font-weight:500;font-size:14px;line-height:1.6}
+.s-client{padding:28px 52px 0}
+.s-client .c-lbl{font-size:14px;font-weight:500}
+.s-client input.cname{font-size:24px;font-weight:700;text-transform:uppercase;padding-left:0;margin-left:-4px}
+.s-meta{display:flex;flex-wrap:wrap;gap:4px 10px;color:#555;font-size:13px;font-weight:500;margin-top:6px;align-items:center}
+.s-meta input{width:auto;font-size:13px;color:#555}
+.s-items{padding:20px 52px 0}
+table.qt{width:100%;border-collapse:collapse;font-size:13px}
+table.qt thead th{background:#1d1d1d;color:#fff;font-weight:500;text-align:left;padding:10px 10px;font-size:13px}
+table.qt thead th.c{text-align:center}
+table.qt td{padding:10px;vertical-align:middle}
+table.qt tbody tr:nth-child(even){background:#ececec}
+table.qt td.art textarea{font-weight:600;text-transform:uppercase;resize:none;overflow:hidden;line-height:1.35}
+table.qt td.car textarea{resize:none;font-weight:500;line-height:1.5;overflow:hidden}
+table.qt td.num{text-align:center;width:80px}
+table.qt td.num input{text-align:center;font-family:var(--f-body)}
+table.qt td.lt{width:96px;text-align:right;font-weight:700;padding-right:12px}
+table.qt td.num{width:70px}
+table.qt td.pr{width:100px;text-align:right;font-weight:600}
+table.qt td.pr input{text-align:right;font-family:var(--f-body);font-weight:600}
+table.qt td.del{width:30px;padding:0}
+.del button{all:unset;cursor:pointer;color:#999;font-size:16px;padding:4px 8px}
+.del button:hover{color:#c00}
+.totals{display:grid;grid-template-columns:1fr 120px;gap:8px 20px;justify-items:end;margin-top:10px;font-size:15px;font-weight:500}
+.totals .rule{grid-column:1/-1;height:2px;background:#1d1d1d;width:100%}
+.totals .gt{font-size:20px;font-weight:700}
+.totals input{width:46px;text-align:center;font-weight:500}
+.s-foot{margin-top:auto;background:#1d1d1d;color:#fff;display:grid;grid-template-columns:1fr 1px 240px;gap:24px;padding:26px 40px 26px 34px}
+.s-foot h2{font-family:var(--f-body);color:#fff;font-size:30px;font-weight:700;margin:0 0 8px}
+.s-foot .vr{background:#fff;opacity:.8}
+.s-foot ul{margin:0;padding-left:18px;font-size:11.5px;line-height:1.55;font-weight:500}
+.s-foot .pay{font-size:15px;font-weight:600;line-height:1.6}
+.s-foot .pay p{margin:0 0 10px}
+.s-foot textarea{color:#fff;font-size:11.5px;font-weight:500;line-height:1.55;resize:none;overflow:hidden}
+.s-foot textarea:focus{background:#2a2a28}
+.empty-q{text-align:center;color:#888;padding:26px 0;font-size:13px}
+.no-print{}
+@media (max-width:720px){
+  .row3,.grid2,.result{grid-template-columns:1fr}
+  .price-card .val{font-size:44px}
+}
+.opts>div{min-width:0}
+@media (max-width:900px){.opts{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:440px){.opts{grid-template-columns:1fr}.fields{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@page{size:A4;margin:0}
+@media print{
+  body{background:#fff}
+  header.top,.qtools,.tabpane:not(#tab-cot),.no-print,.toast,h2.ph,.lede{display:none!important}
+  #tab-cot{display:block!important}
+  #wa-pane,.subtabs{display:none!important}
+  #pdf-pane{display:block!important}
+  main{padding:0}
+  .wrap{padding:0;max-width:none}
+  .sheet{box-shadow:none;margin:0;width:210mm;min-height:297mm}
+  .sheet input,.sheet textarea{border-color:transparent!important;background:transparent!important}
+  .sheet-scroll{overflow:visible}
+  .sheet input::placeholder{color:transparent}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <svg class="ic" viewBox="45 61.5 966 966" aria-hidden="true"><circle cx="528" cy="544.5" r="483" fill="#fbf8f0"/><path fill="#1d1d1d" d=" M474.7 899.1 C482.1 897.3 508.0 890.4 538.5 882.0 C555.0 877.5 571.7 873.0 589.0 868.5 C595.9 866.7 611.9 862.4 624.5 859.0 C658.5 849.8 662.5 848.8 686.0 842.6 C697.8 839.5 708.6 836.5 710.0 836.0 C711.4 835.6 718.1 833.7 725.0 831.9 C765.7 821.5 784.3 815.9 788.5 813.0 C800.0 805.1 802.5 786.8 793.4 776.2 C789.5 771.5 784.7 768.5 748.0 747.4 C702.1 721.0 660.1 696.8 652.3 692.2 C638.1 683.8 634.2 684.0 593.0 695.7 C586.1 697.6 575.3 700.5 569.0 702.1 C562.7 703.7 555.0 705.7 552.0 706.6 C549.0 707.5 538.4 710.3 528.5 713.0 C496.2 721.6 455.3 732.6 444.2 735.6 L438.9 737.1 L439.2 809.8 C439.5 891.6 439.0 885.9 447.2 893.7 C454.6 900.9 461.7 902.2 474.7 899.1Z M370.3 877.6 C376.7 875.7 382.4 870.9 385.4 864.8 L388.0 859.6 L388.0 805.3 C388.0 775.4 387.6 751.0 387.2 751.0 C386.7 751.0 380.5 752.6 373.4 754.5 C366.3 756.5 354.4 759.7 347.0 761.6 C339.6 763.6 332.1 765.6 330.5 766.0 C328.9 766.5 324.8 767.6 321.5 768.5 C318.2 769.4 309.6 771.6 302.5 773.5 C271.0 781.8 266.7 783.4 262.4 788.2 C255.0 796.2 253.4 808.6 258.4 817.7 C262.1 824.4 263.7 825.8 274.5 832.1 C299.2 846.5 343.1 871.7 347.9 874.3 C356.6 879.1 362.5 880.0 370.3 877.6Z M208.0 746.6 C215.5 744.7 253.5 734.6 264.0 731.6 C268.7 730.3 277.2 728.0 283.0 726.5 C288.8 725.0 295.5 723.2 298.0 722.5 C300.5 721.8 304.3 720.7 306.5 720.1 C308.7 719.5 316.6 717.4 324.0 715.5 C337.6 712.0 346.0 709.7 351.5 708.0 C353.1 707.5 361.7 705.3 370.4 703.0 C379.2 700.7 386.7 698.7 387.2 698.4 C387.6 698.1 388.0 643.1 388.0 576.2 C388.0 459.7 387.9 454.3 386.1 450.5 C383.8 445.5 377.1 439.1 370.5 435.5 C364.7 432.4 358.6 428.8 333.0 414.0 C314.7 403.3 280.4 383.5 247.5 364.5 C203.8 339.2 203.6 339.1 192.4 342.5 C186.0 344.4 180.6 349.0 177.2 355.4 L174.5 360.5 L174.5 544.5 L174.5 728.5 L177.2 733.6 C183.3 745.3 194.4 749.9 208.0 746.6Z M867.5 743.6 C872.8 740.4 877.6 734.1 879.5 727.6 C881.4 721.2 881.8 370.7 879.9 361.8 C876.0 343.4 862.0 337.2 838.7 343.5 C823.9 347.5 817.8 349.2 813.0 350.6 C810.5 351.3 799.7 354.2 789.0 357.1 C778.3 359.9 761.4 364.4 751.5 367.0 C741.6 369.7 729.9 372.8 725.5 374.0 C681.9 385.6 668.3 389.5 667.2 390.9 C666.2 392.1 666.0 416.7 666.2 513.0 L666.5 633.5 L668.8 638.2 C672.1 644.8 676.2 648.0 696.1 659.4 C705.7 664.9 724.5 675.7 738.0 683.5 C814.6 728.0 845.7 745.8 847.7 746.4 C852.1 747.7 863.2 746.1 867.5 743.6Z M549.0 603.3 C576.0 594.3 593.1 571.0 593.2 543.0 C593.3 523.6 587.8 509.8 574.5 496.4 C561.2 483.0 548.3 477.6 529.5 477.6 C496.0 477.6 471.5 498.9 465.4 533.3 C461.7 553.9 471.1 577.9 488.3 591.8 C505.9 606.0 528.3 610.2 549.0 603.3Z M435.6 399.4 C443.2 397.4 450.9 395.5 452.5 395.0 C454.1 394.5 464.1 391.9 474.5 389.1 C484.9 386.3 496.0 383.4 499.0 382.5 C504.3 381.1 512.1 379.0 553.5 368.1 C564.0 365.3 574.1 362.6 576.0 362.0 C586.6 359.0 591.6 357.7 602.0 354.9 C608.3 353.3 614.0 351.4 614.5 350.9 C616.1 349.3 616.5 212.8 614.9 207.0 C612.2 197.3 605.2 190.5 595.3 188.0 C590.3 186.7 589.5 186.8 571.8 191.3 C551.7 196.5 518.4 205.3 510.5 207.6 C507.8 208.4 497.2 211.2 487.0 213.9 C476.8 216.6 463.3 220.3 457.0 222.0 C450.7 223.8 442.8 225.9 439.5 226.7 C436.2 227.5 427.2 229.9 419.5 232.0 C411.8 234.2 393.6 239.1 379.0 243.0 C364.4 246.9 348.4 251.2 343.5 252.6 C338.6 253.9 325.9 257.3 315.5 260.0 C268.7 272.4 266.6 273.1 261.5 279.2 C252.4 290.0 254.1 307.5 264.9 315.9 C268.2 318.4 270.4 319.8 281.0 325.8 C284.1 327.5 305.0 339.6 342.0 361.0 C360.1 371.5 400.7 394.9 406.0 397.9 C409.9 400.1 417.5 402.7 420.6 402.9 C421.2 403.0 427.9 401.4 435.6 399.4Z M673.0 336.0 C674.9 335.4 682.4 333.4 689.5 331.5 C696.6 329.6 710.1 326.0 719.5 323.5 C728.9 320.9 747.3 316.0 760.4 312.4 C785.1 305.7 788.7 304.1 793.9 297.8 C801.4 288.5 800.6 274.0 792.1 265.0 C787.9 260.6 783.0 257.5 757.2 242.8 C755.4 241.8 742.8 234.5 729.2 226.7 C695.5 207.2 693.3 206.5 681.7 211.9 C674.8 215.0 672.3 217.4 668.8 224.0 L666.5 228.5 L666.2 281.4 C666.0 310.5 666.1 334.9 666.4 335.6 C667.0 337.3 668.4 337.3 673.0 336.0Z"/></svg>
+      <div>
+        <svg class="wm" viewBox="-1 -24 168 26" aria-label="Makerbox"><g fill="#fbf8f0"><path transform="translate(0.183 0.000)" d="M 11.015625 0.269531 C 10.402344 -1.222656 9.796875 -2.707031 9.191406 -4.183594 C 8.589844 -5.660156 7.980469 -7.136719 7.371094 -8.613281 C 7.226562 -8.953125 7.042969 -9.433594 6.816406 -10.054688 C 6.589844 -10.675781 6.359375 -11.390625 6.113281 -12.203125 C 5.871094 -13.011719 5.652344 -13.847656 5.453125 -14.714844 C 5.488281 -13.703125 5.515625 -12.753906 5.535156 -11.863281 C 5.550781 -10.972656 5.550781 -10.125 5.535156 -9.3125 C 5.535156 -8.917969 5.535156 -8.511719 5.535156 -8.097656 C 5.535156 -7.683594 5.53125 -7.277344 5.519531 -6.871094 C 5.511719 -6.464844 5.507812 -6.0625 5.507812 -5.65625 C 5.507812 -5.25 5.507812 -4.839844 5.507812 -4.425781 C 5.507812 -3.941406 5.492188 -3.472656 5.464844 -3.023438 C 5.441406 -2.574219 5.410156 -2.230469 5.371094 -1.996094 C 5.679688 -2.035156 6.050781 -2.054688 6.492188 -2.066406 C 6.933594 -2.074219 7.242188 -2.078125 7.425781 -2.078125 L 7.425781 0 L 1.269531 0 L 1.269531 -1.78125 C 1.683594 -1.800781 2.027344 -1.855469 2.308594 -1.945312 C 2.585938 -2.035156 2.804688 -2.242188 2.957031 -2.566406 C 3.109375 -2.886719 3.183594 -3.410156 3.183594 -4.128906 L 3.347656 -14.46875 C 3.367188 -14.957031 3.382812 -15.421875 3.402344 -15.875 C 3.417969 -16.324219 3.4375 -16.664062 3.457031 -16.898438 C 3.167969 -16.882812 2.808594 -16.867188 2.375 -16.859375 C 1.945312 -16.851562 1.628906 -16.835938 1.429688 -16.820312 L 1.429688 -18.898438 L 7.398438 -18.898438 L 11.472656 -8.449219 C 11.636719 -8.035156 11.816406 -7.554688 12.011719 -7.003906 C 12.210938 -6.457031 12.398438 -5.925781 12.582031 -5.414062 C 12.761719 -4.898438 12.894531 -4.492188 12.984375 -4.183594 L 13.011719 -4.183594 C 13.246094 -4.8125 13.460938 -5.425781 13.660156 -6.019531 C 13.859375 -6.613281 14.066406 -7.191406 14.28125 -7.746094 C 14.984375 -9.621094 15.679688 -11.480469 16.375 -13.335938 C 17.066406 -15.191406 17.761719 -17.042969 18.464844 -18.898438 L 24.703125 -18.898438 L 24.703125 -17.117188 C 24.304688 -17.097656 23.953125 -17.042969 23.648438 -16.953125 C 23.34375 -16.863281 23.113281 -16.660156 22.960938 -16.347656 C 22.808594 -16.03125 22.738281 -15.503906 22.757812 -14.765625 L 23.164062 -4.425781 C 23.199219 -3.941406 23.199219 -3.472656 23.164062 -3.023438 C 23.125 -2.574219 23.089844 -2.230469 23.054688 -1.996094 C 23.359375 -2.035156 23.734375 -2.054688 24.175781 -2.066406 C 24.617188 -2.074219 24.925781 -2.078125 25.105469 -2.078125 L 25.105469 0 L 17.601562 0 L 17.601562 -1.78125 C 18.015625 -1.800781 18.371094 -1.855469 18.667969 -1.945312 C 18.964844 -2.035156 19.191406 -2.242188 19.34375 -2.566406 C 19.496094 -2.886719 19.554688 -3.410156 19.519531 -4.128906 L 19.300781 -9.855469 C 19.300781 -10.070312 19.285156 -10.441406 19.25 -10.972656 C 19.210938 -11.503906 19.179688 -12.089844 19.152344 -12.730469 C 19.125 -13.367188 19.105469 -13.964844 19.085938 -14.523438 C 19.03125 -14.398438 18.976562 -14.277344 18.925781 -14.160156 C 18.871094 -14.042969 18.824219 -13.921875 18.789062 -13.796875 L 13.523438 0.269531 Z M 11.015625 0.269531 "/><path transform="translate(27.174 0.000)" d="M 0.109375 0 L 0.109375 -1.863281 C 0.613281 -1.863281 1.015625 -2.007812 1.324219 -2.292969 C 1.628906 -2.582031 1.886719 -2.960938 2.09375 -3.429688 C 2.300781 -3.894531 2.5 -4.398438 2.699219 -4.941406 L 7.964844 -19.382812 L 9.855469 -19.382812 L 15.605469 -4.671875 C 15.710938 -4.398438 15.855469 -3.992188 16.035156 -3.441406 C 16.214844 -2.894531 16.324219 -2.410156 16.359375 -1.996094 C 16.664062 -2.035156 16.957031 -2.054688 17.238281 -2.066406 C 17.515625 -2.074219 17.746094 -2.078125 17.925781 -2.078125 L 17.925781 0 L 10.664062 0 L 10.664062 -1.78125 C 11.167969 -1.78125 11.515625 -1.886719 11.703125 -2.09375 C 11.890625 -2.300781 11.976562 -2.582031 11.960938 -2.941406 C 11.941406 -3.300781 11.84375 -3.707031 11.664062 -4.15625 L 11.121094 -5.640625 L 5.265625 -5.535156 L 4.832031 -4.265625 C 4.742188 -4.03125 4.613281 -3.683594 4.441406 -3.226562 C 4.269531 -2.765625 4.113281 -2.382812 3.96875 -2.078125 C 4.257812 -2.113281 4.601562 -2.136719 5.007812 -2.144531 C 5.414062 -2.15625 5.707031 -2.160156 5.886719 -2.160156 L 5.886719 0 Z M 5.9375 -7.558594 L 10.449219 -7.558594 L 9.207031 -10.933594 C 8.972656 -11.582031 8.765625 -12.234375 8.585938 -12.890625 C 8.40625 -13.546875 8.269531 -14.128906 8.179688 -14.632812 L 8.152344 -14.632812 C 8.082031 -14.324219 7.972656 -13.867188 7.828125 -13.253906 C 7.683594 -12.644531 7.460938 -11.914062 7.152344 -11.070312 Z M 5.9375 -7.558594 "/><path transform="translate(45.957 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 L 9.097656 -18.898438 L 9.097656 -17.117188 C 8.703125 -17.097656 8.359375 -17.042969 8.070312 -16.953125 C 7.785156 -16.863281 7.5625 -16.660156 7.410156 -16.347656 C 7.257812 -16.03125 7.179688 -15.503906 7.179688 -14.765625 L 7.179688 -10.664062 L 9.125 -10.664062 L 11.203125 -14.199219 C 11.507812 -14.738281 11.832031 -15.28125 12.175781 -15.820312 C 12.515625 -16.359375 12.804688 -16.730469 13.039062 -16.925781 C 12.75 -16.910156 12.445312 -16.890625 12.121094 -16.871094 C 11.796875 -16.855469 11.535156 -16.835938 11.339844 -16.820312 L 11.339844 -18.898438 L 17.953125 -18.898438 L 17.953125 -17.117188 C 17.554688 -17.097656 17.128906 -17.027344 16.671875 -16.898438 C 16.210938 -16.773438 15.738281 -16.523438 15.253906 -16.144531 C 14.765625 -15.765625 14.273438 -15.171875 13.769531 -14.363281 L 11.175781 -10.203125 C 11.535156 -9.96875 11.855469 -9.722656 12.136719 -9.460938 C 12.414062 -9.203125 12.660156 -8.917969 12.878906 -8.613281 L 15.65625 -4.699219 C 16.019531 -4.195312 16.390625 -3.722656 16.777344 -3.28125 C 17.164062 -2.839844 17.566406 -2.484375 17.980469 -2.214844 C 18.394531 -1.945312 18.796875 -1.800781 19.195312 -1.78125 L 19.195312 0 L 15.035156 0 C 14.894531 -0.0195312 14.660156 -0.179688 14.335938 -0.484375 C 14.011719 -0.792969 13.667969 -1.160156 13.308594 -1.59375 C 12.949219 -2.023438 12.644531 -2.410156 12.390625 -2.753906 L 9.71875 -6.640625 C 9.484375 -6.984375 9.226562 -7.332031 8.949219 -7.695312 C 8.671875 -8.054688 8.40625 -8.324219 8.152344 -8.503906 L 7.179688 -8.503906 L 7.179688 -4.425781 C 7.179688 -3.941406 7.171875 -3.472656 7.152344 -3.023438 C 7.136719 -2.574219 7.109375 -2.230469 7.074219 -1.996094 C 7.359375 -2.035156 7.726562 -2.054688 8.167969 -2.066406 C 8.605469 -2.074219 8.917969 -2.078125 9.097656 -2.078125 L 9.097656 0 Z M 1.351562 0 "/><path transform="translate(65.928 0.000)" d="M 10.527344 -6.507812 C 10.527344 -7.261719 10.410156 -7.8125 10.175781 -8.152344 C 9.945312 -8.496094 9.625 -8.707031 9.21875 -8.789062 C 8.8125 -8.867188 8.367188 -8.898438 7.882812 -8.882812 L 7.179688 -8.855469 L 7.179688 -4.425781 C 7.179688 -3.941406 7.171875 -3.484375 7.152344 -3.050781 C 7.136719 -2.617188 7.109375 -2.285156 7.074219 -2.050781 L 10.691406 -2.050781 C 11.230469 -2.050781 11.753906 -2.171875 12.257812 -2.417969 C 12.761719 -2.660156 13.175781 -3.0625 13.5 -3.632812 C 13.820312 -4.199219 13.984375 -4.96875 13.984375 -5.9375 L 15.738281 -5.9375 L 15.605469 0 L 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 L 14.847656 -18.898438 L 15.011719 -13.660156 L 13.226562 -13.660156 C 13.226562 -14.648438 13.058594 -15.398438 12.714844 -15.902344 C 12.375 -16.40625 11.949219 -16.742188 11.445312 -16.914062 C 10.941406 -17.085938 10.449219 -17.160156 9.960938 -17.140625 L 8.988281 -17.117188 C 8.613281 -17.117188 8.289062 -17.066406 8.019531 -16.96875 C 7.746094 -16.867188 7.539062 -16.652344 7.398438 -16.320312 C 7.253906 -15.984375 7.179688 -15.46875 7.179688 -14.765625 L 7.179688 -10.71875 L 10.339844 -10.71875 L 10.230469 -13.066406 L 12.308594 -13.066406 L 12.308594 -6.507812 Z M 10.527344 -6.507812 "/><path transform="translate(83.524 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 C 2.628906 -18.914062 3.90625 -18.925781 5.183594 -18.925781 C 6.460938 -18.925781 7.738281 -18.933594 9.015625 -18.953125 C 10.601562 -18.96875 11.976562 -18.789062 13.148438 -18.410156 C 14.316406 -18.035156 15.21875 -17.421875 15.847656 -16.574219 C 16.476562 -15.730469 16.773438 -14.585938 16.738281 -13.148438 C 16.71875 -12.390625 16.535156 -11.671875 16.183594 -10.988281 C 15.832031 -10.304688 15.3125 -9.699219 14.617188 -9.179688 C 13.925781 -8.65625 13.046875 -8.242188 11.984375 -7.9375 C 12.328125 -7.792969 12.664062 -7.558594 13 -7.234375 C 13.332031 -6.910156 13.613281 -6.570312 13.847656 -6.210938 L 15.117188 -4.320312 C 15.515625 -3.707031 15.863281 -3.222656 16.171875 -2.863281 C 16.476562 -2.5 16.78125 -2.234375 17.089844 -2.066406 C 17.394531 -1.894531 17.746094 -1.800781 18.140625 -1.78125 L 18.140625 0 L 13.6875 0 C 13.363281 -0.234375 13.042969 -0.570312 12.730469 -1.011719 C 12.414062 -1.453125 12.078125 -1.960938 11.714844 -2.539062 L 9.71875 -5.777344 C 9.484375 -6.136719 9.28125 -6.441406 9.109375 -6.695312 C 8.941406 -6.945312 8.765625 -7.164062 8.585938 -7.34375 C 8.296875 -7.34375 8.054688 -7.34375 7.855469 -7.34375 C 7.65625 -7.34375 7.433594 -7.34375 7.179688 -7.34375 L 7.179688 -4.453125 C 7.179688 -3.949219 7.171875 -3.472656 7.152344 -3.023438 C 7.136719 -2.574219 7.109375 -2.230469 7.074219 -1.996094 C 7.269531 -2.015625 7.523438 -2.027344 7.828125 -2.039062 C 8.136719 -2.046875 8.4375 -2.054688 8.734375 -2.066406 C 9.03125 -2.074219 9.242188 -2.078125 9.367188 -2.078125 L 9.367188 0 Z M 8.476562 -9.285156 C 9.484375 -9.285156 10.292969 -9.433594 10.90625 -9.730469 C 11.519531 -10.027344 11.964844 -10.480469 12.242188 -11.082031 C 12.523438 -11.683594 12.660156 -12.445312 12.660156 -13.363281 C 12.660156 -14.226562 12.527344 -14.90625 12.257812 -15.402344 C 11.984375 -15.894531 11.648438 -16.265625 11.242188 -16.507812 C 10.839844 -16.75 10.429688 -16.902344 10.015625 -16.96875 C 9.601562 -17.03125 9.257812 -17.0625 8.988281 -17.0625 C 8.613281 -17.0625 8.289062 -17.015625 8.019531 -16.925781 C 7.746094 -16.835938 7.539062 -16.636719 7.398438 -16.332031 C 7.253906 -16.027344 7.179688 -15.558594 7.179688 -14.929688 L 7.179688 -9.394531 C 7.378906 -9.375 7.585938 -9.355469 7.800781 -9.328125 C 8.019531 -9.300781 8.242188 -9.285156 8.476562 -9.285156 Z M 8.476562 -9.285156 "/><path transform="translate(102.793 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 C 2.589844 -18.914062 3.839844 -18.925781 5.089844 -18.925781 C 6.339844 -18.925781 7.585938 -18.933594 8.828125 -18.953125 C 10.988281 -18.96875 12.703125 -18.570312 13.96875 -17.75 C 15.238281 -16.929688 15.828125 -15.695312 15.738281 -14.039062 C 15.703125 -13.515625 15.539062 -13.007812 15.253906 -12.511719 C 14.964844 -12.019531 14.539062 -11.574219 13.96875 -11.175781 C 13.402344 -10.78125 12.695312 -10.464844 11.851562 -10.230469 L 11.851562 -10.203125 C 13.652344 -9.917969 14.972656 -9.316406 15.820312 -8.410156 C 16.664062 -7.5 17.089844 -6.488281 17.089844 -5.371094 C 17.089844 -4.203125 16.804688 -3.21875 16.238281 -2.417969 C 15.671875 -1.617188 14.894531 -1.011719 13.902344 -0.605469 C 12.914062 -0.203125 11.789062 0 10.527344 0 Z M 7.074219 -1.917969 C 7.398438 -1.917969 7.703125 -1.917969 7.992188 -1.917969 C 8.277344 -1.917969 8.566406 -1.921875 8.855469 -1.929688 C 9.144531 -1.9375 9.421875 -1.945312 9.691406 -1.945312 C 10.789062 -1.996094 11.589844 -2.347656 12.09375 -2.996094 C 12.597656 -3.644531 12.851562 -4.464844 12.851562 -5.453125 C 12.851562 -6.28125 12.679688 -6.933594 12.335938 -7.410156 C 11.996094 -7.886719 11.558594 -8.226562 11.027344 -8.421875 C 10.496094 -8.621094 9.945312 -8.71875 9.367188 -8.71875 C 8.917969 -8.71875 8.53125 -8.71875 8.207031 -8.71875 C 7.882812 -8.71875 7.539062 -8.710938 7.179688 -8.691406 L 7.179688 -4.292969 C 7.179688 -3.804688 7.171875 -3.347656 7.152344 -2.914062 C 7.136719 -2.484375 7.109375 -2.152344 7.074219 -1.917969 Z M 7.179688 -10.609375 L 8.585938 -10.636719 C 9.339844 -10.65625 9.9375 -10.824219 10.378906 -11.148438 C 10.820312 -11.472656 11.136719 -11.910156 11.324219 -12.457031 C 11.515625 -13.007812 11.609375 -13.605469 11.609375 -14.253906 C 11.609375 -14.972656 11.464844 -15.535156 11.175781 -15.941406 C 10.886719 -16.347656 10.527344 -16.636719 10.097656 -16.820312 C 9.664062 -17 9.214844 -17.078125 8.746094 -17.0625 C 8.457031 -17.0625 8.199219 -17.015625 7.964844 -16.925781 C 7.730469 -16.835938 7.539062 -16.632812 7.398438 -16.320312 C 7.253906 -16.003906 7.179688 -15.496094 7.179688 -14.792969 Z M 7.179688 -10.609375 "/><path transform="translate(121.387 0.000)" d="M 10.339844 0.433594 C 8.628906 0.433594 7.175781 0.144531 5.980469 -0.433594 C 4.78125 -1.007812 3.816406 -1.777344 3.078125 -2.738281 C 2.339844 -3.703125 1.800781 -4.769531 1.457031 -5.9375 C 1.117188 -7.109375 0.945312 -8.277344 0.945312 -9.449219 C 0.945312 -10.582031 1.136719 -11.730469 1.523438 -12.890625 C 1.914062 -14.050781 2.496094 -15.117188 3.28125 -16.089844 C 4.0625 -17.0625 5.046875 -17.84375 6.234375 -18.4375 C 7.425781 -19.03125 8.820312 -19.328125 10.421875 -19.328125 C 12.058594 -19.328125 13.472656 -19.03125 14.660156 -18.4375 C 15.847656 -17.84375 16.820312 -17.058594 17.574219 -16.078125 C 18.332031 -15.09375 18.894531 -14.027344 19.261719 -12.878906 C 19.628906 -11.726562 19.816406 -10.582031 19.816406 -9.449219 C 19.816406 -8.332031 19.621094 -7.199219 19.234375 -6.046875 C 18.847656 -4.894531 18.261719 -3.828125 17.480469 -2.847656 C 16.695312 -1.867188 15.710938 -1.074219 14.523438 -0.472656 C 13.335938 0.128906 11.941406 0.433594 10.339844 0.433594 Z M 10.636719 -1.539062 C 11.574219 -1.539062 12.355469 -1.769531 12.984375 -2.226562 C 13.613281 -2.6875 14.117188 -3.285156 14.496094 -4.023438 C 14.875 -4.761719 15.144531 -5.566406 15.308594 -6.4375 C 15.46875 -7.3125 15.550781 -8.160156 15.550781 -8.988281 C 15.550781 -10.230469 15.441406 -11.367188 15.226562 -12.390625 C 15.011719 -13.417969 14.675781 -14.304688 14.226562 -15.050781 C 13.777344 -15.796875 13.207031 -16.375 12.511719 -16.777344 C 11.820312 -17.183594 11.003906 -17.375 10.070312 -17.359375 C 9.152344 -17.339844 8.378906 -17.09375 7.746094 -16.617188 C 7.117188 -16.140625 6.613281 -15.527344 6.234375 -14.78125 C 5.859375 -14.035156 5.589844 -13.21875 5.425781 -12.335938 C 5.265625 -11.457031 5.183594 -10.601562 5.183594 -9.773438 C 5.183594 -8.925781 5.277344 -8.027344 5.464844 -7.074219 C 5.65625 -6.117188 5.957031 -5.21875 6.371094 -4.375 C 6.785156 -3.527344 7.34375 -2.84375 8.042969 -2.320312 C 8.746094 -1.800781 9.609375 -1.539062 10.636719 -1.539062 Z M 10.636719 -1.539062 "/><path transform="translate(142.033 0.000)" d="M 0.945312 0 L 0.945312 -1.78125 C 1.464844 -1.90625 1.988281 -2.199219 2.511719 -2.660156 C 3.03125 -3.117188 3.625 -3.789062 4.292969 -4.671875 L 7.425781 -8.855469 C 6.703125 -9.773438 5.984375 -10.691406 5.265625 -11.609375 C 4.542969 -12.527344 3.816406 -13.445312 3.078125 -14.363281 C 2.789062 -14.738281 2.527344 -15.160156 2.292969 -15.617188 C 2.0625 -16.078125 1.871094 -16.503906 1.726562 -16.898438 C 1.441406 -16.882812 1.191406 -16.867188 0.984375 -16.859375 C 0.777344 -16.851562 0.574219 -16.835938 0.378906 -16.820312 L 0.378906 -18.898438 L 8.585938 -18.898438 L 8.585938 -17.117188 L 8.316406 -17.117188 C 7.757812 -17.117188 7.371094 -17.035156 7.152344 -16.871094 C 6.9375 -16.710938 6.863281 -16.488281 6.925781 -16.210938 C 6.988281 -15.933594 7.152344 -15.621094 7.425781 -15.28125 C 7.835938 -14.777344 8.242188 -14.273438 8.640625 -13.769531 C 9.035156 -13.265625 9.429688 -12.75 9.828125 -12.230469 L 11.878906 -15.0625 C 12.257812 -15.585938 12.558594 -15.96875 12.78125 -16.210938 C 13.007812 -16.453125 13.238281 -16.683594 13.472656 -16.898438 C 13.183594 -16.882812 12.824219 -16.867188 12.390625 -16.859375 C 11.960938 -16.851562 11.644531 -16.835938 11.445312 -16.820312 L 11.445312 -18.898438 L 17.574219 -18.898438 L 17.574219 -17.117188 C 17.160156 -17.0625 16.75 -16.917969 16.347656 -16.683594 C 15.941406 -16.449219 15.53125 -16.121094 15.117188 -15.699219 C 14.703125 -15.273438 14.253906 -14.730469 13.769531 -14.066406 L 11.175781 -10.527344 C 11.753906 -9.808594 12.320312 -9.089844 12.878906 -8.367188 C 13.433594 -7.648438 13.996094 -6.929688 14.5625 -6.210938 C 15.132812 -5.488281 15.695312 -4.769531 16.25 -4.050781 C 16.558594 -3.671875 16.835938 -3.3125 17.089844 -2.96875 C 17.339844 -2.628906 17.53125 -2.304688 17.65625 -1.996094 C 17.960938 -2.035156 18.175781 -2.054688 18.304688 -2.066406 C 18.429688 -2.074219 18.582031 -2.078125 18.761719 -2.078125 L 18.761719 0 L 10.691406 0 L 10.691406 -1.78125 C 11.355469 -1.78125 11.789062 -1.863281 11.984375 -2.023438 C 12.183594 -2.1875 12.234375 -2.40625 12.136719 -2.6875 C 12.035156 -2.964844 11.851562 -3.277344 11.582031 -3.617188 C 11.132812 -4.195312 10.675781 -4.773438 10.21875 -5.359375 C 9.757812 -5.945312 9.296875 -6.523438 8.828125 -7.101562 C 8.433594 -6.558594 8.035156 -6.015625 7.640625 -5.464844 C 7.242188 -4.917969 6.847656 -4.375 6.453125 -3.832031 C 6.074219 -3.328125 5.785156 -2.953125 5.589844 -2.699219 C 5.390625 -2.449219 5.183594 -2.214844 4.96875 -1.996094 C 5.273438 -2.015625 5.625 -2.035156 6.019531 -2.050781 C 6.417969 -2.070312 6.703125 -2.078125 6.882812 -2.078125 L 6.882812 0 Z M 0.945312 0 "/></g></svg>
+        <small>Calculadora de impresión 3D</small>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="b-calc" aria-selected="true" data-tab="tab-calc">Calcular</button>
+      <button role="tab" id="b-cot" aria-selected="false" data-tab="tab-cot">Cotización <span id="qcount"></span></button>
+      <button role="tab" id="b-set" aria-selected="false" data-tab="tab-set">Ajustes</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- CALCULAR -->
+  <section class="tabpane" id="tab-calc">
+    <h2 class="ph">Precio de una pieza</h2>
+    <p class="lede">Introduce lo que te da el laminador. El resto sale de la pestaña Ajustes.</p>
+    <div class="panel">
+      <div class="row3">
+        <div class="big-input"><label for="in-h">Horas de impresión</label><div class="unit"><input id="in-h" type="text" inputmode="decimal" value="4.7" autocomplete="off"><span>h</span></div><div class="hint">Acepta 3.5 o 3:30</div></div>
+        <div class="big-input"><label for="in-g">Gramos</label><div class="unit"><input id="in-g" type="number" min="0" step="0.1" value="50"><span>g</span></div></div>
+        <div class="big-input"><label for="in-m">Material</label><select id="in-m"></select></div>
+      </div>
+      <div class="opts">
+        <div><label for="in-n">Piezas en la placa</label><input id="in-n" type="number" min="1" step="1" value="1"><div class="hint">Horas y gramos son del total; el precio se divide entre las piezas</div></div>
+        <div><label for="in-ext">Herrajes / piezas extra</label><div class="unit"><input id="in-ext" type="number" min="0" step="0.01" placeholder="0.00"><span>$ total</span></div><div class="hint">Tornillos, imanes, insertos… lo que cueste para todo el trabajo</div></div>
+        <div><label for="in-emp">Empaque</label><div class="unit"><input id="in-emp" type="number" min="0" step="0.25" value="1"><span>$ total</span></div><div class="hint">Base $1. Cámbialo según lo que vayas a enviar</div></div>
+        <div><label for="in-mod">Costo del modelo 3D</label><div class="unit"><input id="in-mod" type="number" min="0" step="0.01" placeholder="0.00"><span>$</span></div><div class="hint">Opcional, si compraste el archivo</div></div>
+      </div>
+    </div>
+    <div class="result">
+      <div class="price-card">
+        <div><div class="lbl" id="o-lbl">Precio venta directa</div><div class="val" id="o-price">$0</div></div>
+        <div class="sub">
+          <div><b id="o-ml">$0</b><span id="o-ml-l">Mercado Libre</span></div>
+          <div><b id="o-gan">$0</b><span id="o-gan-l">Tu ganancia (directo)</span></div>
+          <div><b id="o-raw">$0</b><span id="o-raw-l">Sin redondeo</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <table class="bd" id="o-bd"></table>
+      </div>
+    </div>
+    <div class="panel bs" id="bs-panel">
+      <div class="bs-head">
+        <h3>En bolívares <span>Solo referencia, no sale en la cotización</span></h3>
+        <button class="btn ghost small" id="btn-rate" type="button">Actualizar tasa</button>
+      </div>
+      <div class="bs-grid">
+        <div class="bs-col"><div class="bs-lbl">A tasa dólar</div><div class="bs-val" id="bs-usd">Bs –</div><div class="bs-rate" id="bs-usd-r">Tasa: –</div><div class="bs-rate" id="bs-usd-t"></div></div>
+        <div class="bs-col"><div class="bs-lbl">A tasa euro</div><div class="bs-val" id="bs-eur">Bs –</div><div class="bs-rate" id="bs-eur-r">Tasa: –</div><div class="bs-rate" id="bs-eur-t"></div></div>
+      </div>
+      <div class="bs-date" id="bs-date">Consultando la tasa del BCV…</div>
+      <div class="bs-manual">
+        <div class="bs-in"><label for="in-usdman">Convertir otro monto</label><div class="unit"><input id="in-usdman" type="number" min="0" step="0.01" placeholder="0.00"><span>$</span></div></div>
+        <div class="bs-grid">
+          <div class="bs-col"><div class="bs-lbl">A tasa dólar</div><div class="bs-val sm" id="bs-m-usd">Bs 0,00</div></div>
+          <div class="bs-col"><div class="bs-lbl">A tasa euro</div><div class="bs-val sm" id="bs-m-eur">Bs 0,00</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel addq">
+      <div><label for="in-name">Nombre de la pieza</label><input id="in-name" type="text" placeholder="Ej: Rejilla de aire acondicionado" autocomplete="off"></div>
+      <div style="flex:0 0 130px"><label for="in-qty">Cantidad (piezas)</label><input id="in-qty" type="number" min="1" step="1" value="1"></div>
+      <div style="flex:0 0 auto"><label for="in-pricekind">Precio</label><select id="in-pricekind"><option value="dir">Directo</option><option value="ml">Mercado Libre</option></select></div>
+      <button class="btn" id="btn-add" type="button">+ Agregar a cotización</button>
+    </div>
+  </section>
+
+  <!-- COTIZACIÓN -->
+  <section class="tabpane" id="tab-cot" hidden>
+    <h2 class="ph">Cotización</h2>
+    <p class="lede">Los productos son los mismos para las dos versiones: el PDF para empresas y pedidos grandes, y el mensaje de WhatsApp para pedidos pequeños.</p>
+    <div class="qtools">
+      <button class="btn ghost" id="btn-additem" type="button">+ Línea manual</button>
+      <label class="qd" for="q-disc">Descuento <input id="q-disc" type="number" min="0" max="100" step="1" value="0"> %</label>
+      <span class="sp"></span>
+      <button class="btn ghost" id="btn-clear" type="button">Nueva cotización</button>
+    </div>
+    <div class="subtabs" role="tablist">
+      <button type="button" role="tab" id="st-pdf" data-sub="pdf-pane" aria-selected="true">PDF</button>
+      <button type="button" role="tab" id="st-wa" data-sub="wa-pane" aria-selected="false">WhatsApp</button>
+    </div>
+    <div id="pdf-pane">
+    <div class="qtools"><button class="btn" id="btn-print" type="button">Imprimir / Guardar PDF</button><span class="hint">Todo lo de la hoja se edita haciendo clic encima.</span></div>
+    <div class="sheet-scroll">
+      <div class="sheet" id="sheet">
+        <div class="s-head">
+          <div class="s-logo"><div class="bar"></div>
+            <svg viewBox="0 0 222 50" aria-label="Makerbox"><g transform="scale(0.050414)"><circle cx="483" cy="483" r="483" fill="#1d1d1d"/><path fill="#fbf8f0" transform="translate(-45 -61.5)" d=" M474.7 899.1 C482.1 897.3 508.0 890.4 538.5 882.0 C555.0 877.5 571.7 873.0 589.0 868.5 C595.9 866.7 611.9 862.4 624.5 859.0 C658.5 849.8 662.5 848.8 686.0 842.6 C697.8 839.5 708.6 836.5 710.0 836.0 C711.4 835.6 718.1 833.7 725.0 831.9 C765.7 821.5 784.3 815.9 788.5 813.0 C800.0 805.1 802.5 786.8 793.4 776.2 C789.5 771.5 784.7 768.5 748.0 747.4 C702.1 721.0 660.1 696.8 652.3 692.2 C638.1 683.8 634.2 684.0 593.0 695.7 C586.1 697.6 575.3 700.5 569.0 702.1 C562.7 703.7 555.0 705.7 552.0 706.6 C549.0 707.5 538.4 710.3 528.5 713.0 C496.2 721.6 455.3 732.6 444.2 735.6 L438.9 737.1 L439.2 809.8 C439.5 891.6 439.0 885.9 447.2 893.7 C454.6 900.9 461.7 902.2 474.7 899.1Z M370.3 877.6 C376.7 875.7 382.4 870.9 385.4 864.8 L388.0 859.6 L388.0 805.3 C388.0 775.4 387.6 751.0 387.2 751.0 C386.7 751.0 380.5 752.6 373.4 754.5 C366.3 756.5 354.4 759.7 347.0 761.6 C339.6 763.6 332.1 765.6 330.5 766.0 C328.9 766.5 324.8 767.6 321.5 768.5 C318.2 769.4 309.6 771.6 302.5 773.5 C271.0 781.8 266.7 783.4 262.4 788.2 C255.0 796.2 253.4 808.6 258.4 817.7 C262.1 824.4 263.7 825.8 274.5 832.1 C299.2 846.5 343.1 871.7 347.9 874.3 C356.6 879.1 362.5 880.0 370.3 877.6Z M208.0 746.6 C215.5 744.7 253.5 734.6 264.0 731.6 C268.7 730.3 277.2 728.0 283.0 726.5 C288.8 725.0 295.5 723.2 298.0 722.5 C300.5 721.8 304.3 720.7 306.5 720.1 C308.7 719.5 316.6 717.4 324.0 715.5 C337.6 712.0 346.0 709.7 351.5 708.0 C353.1 707.5 361.7 705.3 370.4 703.0 C379.2 700.7 386.7 698.7 387.2 698.4 C387.6 698.1 388.0 643.1 388.0 576.2 C388.0 459.7 387.9 454.3 386.1 450.5 C383.8 445.5 377.1 439.1 370.5 435.5 C364.7 432.4 358.6 428.8 333.0 414.0 C314.7 403.3 280.4 383.5 247.5 364.5 C203.8 339.2 203.6 339.1 192.4 342.5 C186.0 344.4 180.6 349.0 177.2 355.4 L174.5 360.5 L174.5 544.5 L174.5 728.5 L177.2 733.6 C183.3 745.3 194.4 749.9 208.0 746.6Z M867.5 743.6 C872.8 740.4 877.6 734.1 879.5 727.6 C881.4 721.2 881.8 370.7 879.9 361.8 C876.0 343.4 862.0 337.2 838.7 343.5 C823.9 347.5 817.8 349.2 813.0 350.6 C810.5 351.3 799.7 354.2 789.0 357.1 C778.3 359.9 761.4 364.4 751.5 367.0 C741.6 369.7 729.9 372.8 725.5 374.0 C681.9 385.6 668.3 389.5 667.2 390.9 C666.2 392.1 666.0 416.7 666.2 513.0 L666.5 633.5 L668.8 638.2 C672.1 644.8 676.2 648.0 696.1 659.4 C705.7 664.9 724.5 675.7 738.0 683.5 C814.6 728.0 845.7 745.8 847.7 746.4 C852.1 747.7 863.2 746.1 867.5 743.6Z M549.0 603.3 C576.0 594.3 593.1 571.0 593.2 543.0 C593.3 523.6 587.8 509.8 574.5 496.4 C561.2 483.0 548.3 477.6 529.5 477.6 C496.0 477.6 471.5 498.9 465.4 533.3 C461.7 553.9 471.1 577.9 488.3 591.8 C505.9 606.0 528.3 610.2 549.0 603.3Z M435.6 399.4 C443.2 397.4 450.9 395.5 452.5 395.0 C454.1 394.5 464.1 391.9 474.5 389.1 C484.9 386.3 496.0 383.4 499.0 382.5 C504.3 381.1 512.1 379.0 553.5 368.1 C564.0 365.3 574.1 362.6 576.0 362.0 C586.6 359.0 591.6 357.7 602.0 354.9 C608.3 353.3 614.0 351.4 614.5 350.9 C616.1 349.3 616.5 212.8 614.9 207.0 C612.2 197.3 605.2 190.5 595.3 188.0 C590.3 186.7 589.5 186.8 571.8 191.3 C551.7 196.5 518.4 205.3 510.5 207.6 C507.8 208.4 497.2 211.2 487.0 213.9 C476.8 216.6 463.3 220.3 457.0 222.0 C450.7 223.8 442.8 225.9 439.5 226.7 C436.2 227.5 427.2 229.9 419.5 232.0 C411.8 234.2 393.6 239.1 379.0 243.0 C364.4 246.9 348.4 251.2 343.5 252.6 C338.6 253.9 325.9 257.3 315.5 260.0 C268.7 272.4 266.6 273.1 261.5 279.2 C252.4 290.0 254.1 307.5 264.9 315.9 C268.2 318.4 270.4 319.8 281.0 325.8 C284.1 327.5 305.0 339.6 342.0 361.0 C360.1 371.5 400.7 394.9 406.0 397.9 C409.9 400.1 417.5 402.7 420.6 402.9 C421.2 403.0 427.9 401.4 435.6 399.4Z M673.0 336.0 C674.9 335.4 682.4 333.4 689.5 331.5 C696.6 329.6 710.1 326.0 719.5 323.5 C728.9 320.9 747.3 316.0 760.4 312.4 C785.1 305.7 788.7 304.1 793.9 297.8 C801.4 288.5 800.6 274.0 792.1 265.0 C787.9 260.6 783.0 257.5 757.2 242.8 C755.4 241.8 742.8 234.5 729.2 226.7 C695.5 207.2 693.3 206.5 681.7 211.9 C674.8 215.0 672.3 217.4 668.8 224.0 L666.5 228.5 L666.2 281.4 C666.0 310.5 666.1 334.9 666.4 335.6 C667.0 337.3 668.4 337.3 673.0 336.0Z"/></g><g fill="#1d1d1d" transform="translate(57.4 33.7)"><path transform="translate(0.183 0.000)" d="M 11.015625 0.269531 C 10.402344 -1.222656 9.796875 -2.707031 9.191406 -4.183594 C 8.589844 -5.660156 7.980469 -7.136719 7.371094 -8.613281 C 7.226562 -8.953125 7.042969 -9.433594 6.816406 -10.054688 C 6.589844 -10.675781 6.359375 -11.390625 6.113281 -12.203125 C 5.871094 -13.011719 5.652344 -13.847656 5.453125 -14.714844 C 5.488281 -13.703125 5.515625 -12.753906 5.535156 -11.863281 C 5.550781 -10.972656 5.550781 -10.125 5.535156 -9.3125 C 5.535156 -8.917969 5.535156 -8.511719 5.535156 -8.097656 C 5.535156 -7.683594 5.53125 -7.277344 5.519531 -6.871094 C 5.511719 -6.464844 5.507812 -6.0625 5.507812 -5.65625 C 5.507812 -5.25 5.507812 -4.839844 5.507812 -4.425781 C 5.507812 -3.941406 5.492188 -3.472656 5.464844 -3.023438 C 5.441406 -2.574219 5.410156 -2.230469 5.371094 -1.996094 C 5.679688 -2.035156 6.050781 -2.054688 6.492188 -2.066406 C 6.933594 -2.074219 7.242188 -2.078125 7.425781 -2.078125 L 7.425781 0 L 1.269531 0 L 1.269531 -1.78125 C 1.683594 -1.800781 2.027344 -1.855469 2.308594 -1.945312 C 2.585938 -2.035156 2.804688 -2.242188 2.957031 -2.566406 C 3.109375 -2.886719 3.183594 -3.410156 3.183594 -4.128906 L 3.347656 -14.46875 C 3.367188 -14.957031 3.382812 -15.421875 3.402344 -15.875 C 3.417969 -16.324219 3.4375 -16.664062 3.457031 -16.898438 C 3.167969 -16.882812 2.808594 -16.867188 2.375 -16.859375 C 1.945312 -16.851562 1.628906 -16.835938 1.429688 -16.820312 L 1.429688 -18.898438 L 7.398438 -18.898438 L 11.472656 -8.449219 C 11.636719 -8.035156 11.816406 -7.554688 12.011719 -7.003906 C 12.210938 -6.457031 12.398438 -5.925781 12.582031 -5.414062 C 12.761719 -4.898438 12.894531 -4.492188 12.984375 -4.183594 L 13.011719 -4.183594 C 13.246094 -4.8125 13.460938 -5.425781 13.660156 -6.019531 C 13.859375 -6.613281 14.066406 -7.191406 14.28125 -7.746094 C 14.984375 -9.621094 15.679688 -11.480469 16.375 -13.335938 C 17.066406 -15.191406 17.761719 -17.042969 18.464844 -18.898438 L 24.703125 -18.898438 L 24.703125 -17.117188 C 24.304688 -17.097656 23.953125 -17.042969 23.648438 -16.953125 C 23.34375 -16.863281 23.113281 -16.660156 22.960938 -16.347656 C 22.808594 -16.03125 22.738281 -15.503906 22.757812 -14.765625 L 23.164062 -4.425781 C 23.199219 -3.941406 23.199219 -3.472656 23.164062 -3.023438 C 23.125 -2.574219 23.089844 -2.230469 23.054688 -1.996094 C 23.359375 -2.035156 23.734375 -2.054688 24.175781 -2.066406 C 24.617188 -2.074219 24.925781 -2.078125 25.105469 -2.078125 L 25.105469 0 L 17.601562 0 L 17.601562 -1.78125 C 18.015625 -1.800781 18.371094 -1.855469 18.667969 -1.945312 C 18.964844 -2.035156 19.191406 -2.242188 19.34375 -2.566406 C 19.496094 -2.886719 19.554688 -3.410156 19.519531 -4.128906 L 19.300781 -9.855469 C 19.300781 -10.070312 19.285156 -10.441406 19.25 -10.972656 C 19.210938 -11.503906 19.179688 -12.089844 19.152344 -12.730469 C 19.125 -13.367188 19.105469 -13.964844 19.085938 -14.523438 C 19.03125 -14.398438 18.976562 -14.277344 18.925781 -14.160156 C 18.871094 -14.042969 18.824219 -13.921875 18.789062 -13.796875 L 13.523438 0.269531 Z M 11.015625 0.269531 "/><path transform="translate(27.174 0.000)" d="M 0.109375 0 L 0.109375 -1.863281 C 0.613281 -1.863281 1.015625 -2.007812 1.324219 -2.292969 C 1.628906 -2.582031 1.886719 -2.960938 2.09375 -3.429688 C 2.300781 -3.894531 2.5 -4.398438 2.699219 -4.941406 L 7.964844 -19.382812 L 9.855469 -19.382812 L 15.605469 -4.671875 C 15.710938 -4.398438 15.855469 -3.992188 16.035156 -3.441406 C 16.214844 -2.894531 16.324219 -2.410156 16.359375 -1.996094 C 16.664062 -2.035156 16.957031 -2.054688 17.238281 -2.066406 C 17.515625 -2.074219 17.746094 -2.078125 17.925781 -2.078125 L 17.925781 0 L 10.664062 0 L 10.664062 -1.78125 C 11.167969 -1.78125 11.515625 -1.886719 11.703125 -2.09375 C 11.890625 -2.300781 11.976562 -2.582031 11.960938 -2.941406 C 11.941406 -3.300781 11.84375 -3.707031 11.664062 -4.15625 L 11.121094 -5.640625 L 5.265625 -5.535156 L 4.832031 -4.265625 C 4.742188 -4.03125 4.613281 -3.683594 4.441406 -3.226562 C 4.269531 -2.765625 4.113281 -2.382812 3.96875 -2.078125 C 4.257812 -2.113281 4.601562 -2.136719 5.007812 -2.144531 C 5.414062 -2.15625 5.707031 -2.160156 5.886719 -2.160156 L 5.886719 0 Z M 5.9375 -7.558594 L 10.449219 -7.558594 L 9.207031 -10.933594 C 8.972656 -11.582031 8.765625 -12.234375 8.585938 -12.890625 C 8.40625 -13.546875 8.269531 -14.128906 8.179688 -14.632812 L 8.152344 -14.632812 C 8.082031 -14.324219 7.972656 -13.867188 7.828125 -13.253906 C 7.683594 -12.644531 7.460938 -11.914062 7.152344 -11.070312 Z M 5.9375 -7.558594 "/><path transform="translate(45.957 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 L 9.097656 -18.898438 L 9.097656 -17.117188 C 8.703125 -17.097656 8.359375 -17.042969 8.070312 -16.953125 C 7.785156 -16.863281 7.5625 -16.660156 7.410156 -16.347656 C 7.257812 -16.03125 7.179688 -15.503906 7.179688 -14.765625 L 7.179688 -10.664062 L 9.125 -10.664062 L 11.203125 -14.199219 C 11.507812 -14.738281 11.832031 -15.28125 12.175781 -15.820312 C 12.515625 -16.359375 12.804688 -16.730469 13.039062 -16.925781 C 12.75 -16.910156 12.445312 -16.890625 12.121094 -16.871094 C 11.796875 -16.855469 11.535156 -16.835938 11.339844 -16.820312 L 11.339844 -18.898438 L 17.953125 -18.898438 L 17.953125 -17.117188 C 17.554688 -17.097656 17.128906 -17.027344 16.671875 -16.898438 C 16.210938 -16.773438 15.738281 -16.523438 15.253906 -16.144531 C 14.765625 -15.765625 14.273438 -15.171875 13.769531 -14.363281 L 11.175781 -10.203125 C 11.535156 -9.96875 11.855469 -9.722656 12.136719 -9.460938 C 12.414062 -9.203125 12.660156 -8.917969 12.878906 -8.613281 L 15.65625 -4.699219 C 16.019531 -4.195312 16.390625 -3.722656 16.777344 -3.28125 C 17.164062 -2.839844 17.566406 -2.484375 17.980469 -2.214844 C 18.394531 -1.945312 18.796875 -1.800781 19.195312 -1.78125 L 19.195312 0 L 15.035156 0 C 14.894531 -0.0195312 14.660156 -0.179688 14.335938 -0.484375 C 14.011719 -0.792969 13.667969 -1.160156 13.308594 -1.59375 C 12.949219 -2.023438 12.644531 -2.410156 12.390625 -2.753906 L 9.71875 -6.640625 C 9.484375 -6.984375 9.226562 -7.332031 8.949219 -7.695312 C 8.671875 -8.054688 8.40625 -8.324219 8.152344 -8.503906 L 7.179688 -8.503906 L 7.179688 -4.425781 C 7.179688 -3.941406 7.171875 -3.472656 7.152344 -3.023438 C 7.136719 -2.574219 7.109375 -2.230469 7.074219 -1.996094 C 7.359375 -2.035156 7.726562 -2.054688 8.167969 -2.066406 C 8.605469 -2.074219 8.917969 -2.078125 9.097656 -2.078125 L 9.097656 0 Z M 1.351562 0 "/><path transform="translate(65.928 0.000)" d="M 10.527344 -6.507812 C 10.527344 -7.261719 10.410156 -7.8125 10.175781 -8.152344 C 9.945312 -8.496094 9.625 -8.707031 9.21875 -8.789062 C 8.8125 -8.867188 8.367188 -8.898438 7.882812 -8.882812 L 7.179688 -8.855469 L 7.179688 -4.425781 C 7.179688 -3.941406 7.171875 -3.484375 7.152344 -3.050781 C 7.136719 -2.617188 7.109375 -2.285156 7.074219 -2.050781 L 10.691406 -2.050781 C 11.230469 -2.050781 11.753906 -2.171875 12.257812 -2.417969 C 12.761719 -2.660156 13.175781 -3.0625 13.5 -3.632812 C 13.820312 -4.199219 13.984375 -4.96875 13.984375 -5.9375 L 15.738281 -5.9375 L 15.605469 0 L 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 L 14.847656 -18.898438 L 15.011719 -13.660156 L 13.226562 -13.660156 C 13.226562 -14.648438 13.058594 -15.398438 12.714844 -15.902344 C 12.375 -16.40625 11.949219 -16.742188 11.445312 -16.914062 C 10.941406 -17.085938 10.449219 -17.160156 9.960938 -17.140625 L 8.988281 -17.117188 C 8.613281 -17.117188 8.289062 -17.066406 8.019531 -16.96875 C 7.746094 -16.867188 7.539062 -16.652344 7.398438 -16.320312 C 7.253906 -15.984375 7.179688 -15.46875 7.179688 -14.765625 L 7.179688 -10.71875 L 10.339844 -10.71875 L 10.230469 -13.066406 L 12.308594 -13.066406 L 12.308594 -6.507812 Z M 10.527344 -6.507812 "/><path transform="translate(83.524 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 C 2.628906 -18.914062 3.90625 -18.925781 5.183594 -18.925781 C 6.460938 -18.925781 7.738281 -18.933594 9.015625 -18.953125 C 10.601562 -18.96875 11.976562 -18.789062 13.148438 -18.410156 C 14.316406 -18.035156 15.21875 -17.421875 15.847656 -16.574219 C 16.476562 -15.730469 16.773438 -14.585938 16.738281 -13.148438 C 16.71875 -12.390625 16.535156 -11.671875 16.183594 -10.988281 C 15.832031 -10.304688 15.3125 -9.699219 14.617188 -9.179688 C 13.925781 -8.65625 13.046875 -8.242188 11.984375 -7.9375 C 12.328125 -7.792969 12.664062 -7.558594 13 -7.234375 C 13.332031 -6.910156 13.613281 -6.570312 13.847656 -6.210938 L 15.117188 -4.320312 C 15.515625 -3.707031 15.863281 -3.222656 16.171875 -2.863281 C 16.476562 -2.5 16.78125 -2.234375 17.089844 -2.066406 C 17.394531 -1.894531 17.746094 -1.800781 18.140625 -1.78125 L 18.140625 0 L 13.6875 0 C 13.363281 -0.234375 13.042969 -0.570312 12.730469 -1.011719 C 12.414062 -1.453125 12.078125 -1.960938 11.714844 -2.539062 L 9.71875 -5.777344 C 9.484375 -6.136719 9.28125 -6.441406 9.109375 -6.695312 C 8.941406 -6.945312 8.765625 -7.164062 8.585938 -7.34375 C 8.296875 -7.34375 8.054688 -7.34375 7.855469 -7.34375 C 7.65625 -7.34375 7.433594 -7.34375 7.179688 -7.34375 L 7.179688 -4.453125 C 7.179688 -3.949219 7.171875 -3.472656 7.152344 -3.023438 C 7.136719 -2.574219 7.109375 -2.230469 7.074219 -1.996094 C 7.269531 -2.015625 7.523438 -2.027344 7.828125 -2.039062 C 8.136719 -2.046875 8.4375 -2.054688 8.734375 -2.066406 C 9.03125 -2.074219 9.242188 -2.078125 9.367188 -2.078125 L 9.367188 0 Z M 8.476562 -9.285156 C 9.484375 -9.285156 10.292969 -9.433594 10.90625 -9.730469 C 11.519531 -10.027344 11.964844 -10.480469 12.242188 -11.082031 C 12.523438 -11.683594 12.660156 -12.445312 12.660156 -13.363281 C 12.660156 -14.226562 12.527344 -14.90625 12.257812 -15.402344 C 11.984375 -15.894531 11.648438 -16.265625 11.242188 -16.507812 C 10.839844 -16.75 10.429688 -16.902344 10.015625 -16.96875 C 9.601562 -17.03125 9.257812 -17.0625 8.988281 -17.0625 C 8.613281 -17.0625 8.289062 -17.015625 8.019531 -16.925781 C 7.746094 -16.835938 7.539062 -16.636719 7.398438 -16.332031 C 7.253906 -16.027344 7.179688 -15.558594 7.179688 -14.929688 L 7.179688 -9.394531 C 7.378906 -9.375 7.585938 -9.355469 7.800781 -9.328125 C 8.019531 -9.300781 8.242188 -9.285156 8.476562 -9.285156 Z M 8.476562 -9.285156 "/><path transform="translate(102.793 0.000)" d="M 1.351562 0 L 1.351562 -1.78125 C 1.765625 -1.800781 2.109375 -1.855469 2.390625 -1.945312 C 2.667969 -2.035156 2.882812 -2.242188 3.035156 -2.566406 C 3.191406 -2.886719 3.265625 -3.410156 3.265625 -4.128906 L 3.265625 -14.46875 C 3.265625 -14.957031 3.28125 -15.421875 3.308594 -15.875 C 3.335938 -16.324219 3.355469 -16.664062 3.375 -16.898438 C 3.085938 -16.882812 2.726562 -16.867188 2.292969 -16.859375 C 1.863281 -16.851562 1.546875 -16.835938 1.351562 -16.820312 L 1.351562 -18.898438 C 2.589844 -18.914062 3.839844 -18.925781 5.089844 -18.925781 C 6.339844 -18.925781 7.585938 -18.933594 8.828125 -18.953125 C 10.988281 -18.96875 12.703125 -18.570312 13.96875 -17.75 C 15.238281 -16.929688 15.828125 -15.695312 15.738281 -14.039062 C 15.703125 -13.515625 15.539062 -13.007812 15.253906 -12.511719 C 14.964844 -12.019531 14.539062 -11.574219 13.96875 -11.175781 C 13.402344 -10.78125 12.695312 -10.464844 11.851562 -10.230469 L 11.851562 -10.203125 C 13.652344 -9.917969 14.972656 -9.316406 15.820312 -8.410156 C 16.664062 -7.5 17.089844 -6.488281 17.089844 -5.371094 C 17.089844 -4.203125 16.804688 -3.21875 16.238281 -2.417969 C 15.671875 -1.617188 14.894531 -1.011719 13.902344 -0.605469 C 12.914062 -0.203125 11.789062 0 10.527344 0 Z M 7.074219 -1.917969 C 7.398438 -1.917969 7.703125 -1.917969 7.992188 -1.917969 C 8.277344 -1.917969 8.566406 -1.921875 8.855469 -1.929688 C 9.144531 -1.9375 9.421875 -1.945312 9.691406 -1.945312 C 10.789062 -1.996094 11.589844 -2.347656 12.09375 -2.996094 C 12.597656 -3.644531 12.851562 -4.464844 12.851562 -5.453125 C 12.851562 -6.28125 12.679688 -6.933594 12.335938 -7.410156 C 11.996094 -7.886719 11.558594 -8.226562 11.027344 -8.421875 C 10.496094 -8.621094 9.945312 -8.71875 9.367188 -8.71875 C 8.917969 -8.71875 8.53125 -8.71875 8.207031 -8.71875 C 7.882812 -8.71875 7.539062 -8.710938 7.179688 -8.691406 L 7.179688 -4.292969 C 7.179688 -3.804688 7.171875 -3.347656 7.152344 -2.914062 C 7.136719 -2.484375 7.109375 -2.152344 7.074219 -1.917969 Z M 7.179688 -10.609375 L 8.585938 -10.636719 C 9.339844 -10.65625 9.9375 -10.824219 10.378906 -11.148438 C 10.820312 -11.472656 11.136719 -11.910156 11.324219 -12.457031 C 11.515625 -13.007812 11.609375 -13.605469 11.609375 -14.253906 C 11.609375 -14.972656 11.464844 -15.535156 11.175781 -15.941406 C 10.886719 -16.347656 10.527344 -16.636719 10.097656 -16.820312 C 9.664062 -17 9.214844 -17.078125 8.746094 -17.0625 C 8.457031 -17.0625 8.199219 -17.015625 7.964844 -16.925781 C 7.730469 -16.835938 7.539062 -16.632812 7.398438 -16.320312 C 7.253906 -16.003906 7.179688 -15.496094 7.179688 -14.792969 Z M 7.179688 -10.609375 "/><path transform="translate(121.387 0.000)" d="M 10.339844 0.433594 C 8.628906 0.433594 7.175781 0.144531 5.980469 -0.433594 C 4.78125 -1.007812 3.816406 -1.777344 3.078125 -2.738281 C 2.339844 -3.703125 1.800781 -4.769531 1.457031 -5.9375 C 1.117188 -7.109375 0.945312 -8.277344 0.945312 -9.449219 C 0.945312 -10.582031 1.136719 -11.730469 1.523438 -12.890625 C 1.914062 -14.050781 2.496094 -15.117188 3.28125 -16.089844 C 4.0625 -17.0625 5.046875 -17.84375 6.234375 -18.4375 C 7.425781 -19.03125 8.820312 -19.328125 10.421875 -19.328125 C 12.058594 -19.328125 13.472656 -19.03125 14.660156 -18.4375 C 15.847656 -17.84375 16.820312 -17.058594 17.574219 -16.078125 C 18.332031 -15.09375 18.894531 -14.027344 19.261719 -12.878906 C 19.628906 -11.726562 19.816406 -10.582031 19.816406 -9.449219 C 19.816406 -8.332031 19.621094 -7.199219 19.234375 -6.046875 C 18.847656 -4.894531 18.261719 -3.828125 17.480469 -2.847656 C 16.695312 -1.867188 15.710938 -1.074219 14.523438 -0.472656 C 13.335938 0.128906 11.941406 0.433594 10.339844 0.433594 Z M 10.636719 -1.539062 C 11.574219 -1.539062 12.355469 -1.769531 12.984375 -2.226562 C 13.613281 -2.6875 14.117188 -3.285156 14.496094 -4.023438 C 14.875 -4.761719 15.144531 -5.566406 15.308594 -6.4375 C 15.46875 -7.3125 15.550781 -8.160156 15.550781 -8.988281 C 15.550781 -10.230469 15.441406 -11.367188 15.226562 -12.390625 C 15.011719 -13.417969 14.675781 -14.304688 14.226562 -15.050781 C 13.777344 -15.796875 13.207031 -16.375 12.511719 -16.777344 C 11.820312 -17.183594 11.003906 -17.375 10.070312 -17.359375 C 9.152344 -17.339844 8.378906 -17.09375 7.746094 -16.617188 C 7.117188 -16.140625 6.613281 -15.527344 6.234375 -14.78125 C 5.859375 -14.035156 5.589844 -13.21875 5.425781 -12.335938 C 5.265625 -11.457031 5.183594 -10.601562 5.183594 -9.773438 C 5.183594 -8.925781 5.277344 -8.027344 5.464844 -7.074219 C 5.65625 -6.117188 5.957031 -5.21875 6.371094 -4.375 C 6.785156 -3.527344 7.34375 -2.84375 8.042969 -2.320312 C 8.746094 -1.800781 9.609375 -1.539062 10.636719 -1.539062 Z M 10.636719 -1.539062 "/><path transform="translate(142.033 0.000)" d="M 0.945312 0 L 0.945312 -1.78125 C 1.464844 -1.90625 1.988281 -2.199219 2.511719 -2.660156 C 3.03125 -3.117188 3.625 -3.789062 4.292969 -4.671875 L 7.425781 -8.855469 C 6.703125 -9.773438 5.984375 -10.691406 5.265625 -11.609375 C 4.542969 -12.527344 3.816406 -13.445312 3.078125 -14.363281 C 2.789062 -14.738281 2.527344 -15.160156 2.292969 -15.617188 C 2.0625 -16.078125 1.871094 -16.503906 1.726562 -16.898438 C 1.441406 -16.882812 1.191406 -16.867188 0.984375 -16.859375 C 0.777344 -16.851562 0.574219 -16.835938 0.378906 -16.820312 L 0.378906 -18.898438 L 8.585938 -18.898438 L 8.585938 -17.117188 L 8.316406 -17.117188 C 7.757812 -17.117188 7.371094 -17.035156 7.152344 -16.871094 C 6.9375 -16.710938 6.863281 -16.488281 6.925781 -16.210938 C 6.988281 -15.933594 7.152344 -15.621094 7.425781 -15.28125 C 7.835938 -14.777344 8.242188 -14.273438 8.640625 -13.769531 C 9.035156 -13.265625 9.429688 -12.75 9.828125 -12.230469 L 11.878906 -15.0625 C 12.257812 -15.585938 12.558594 -15.96875 12.78125 -16.210938 C 13.007812 -16.453125 13.238281 -16.683594 13.472656 -16.898438 C 13.183594 -16.882812 12.824219 -16.867188 12.390625 -16.859375 C 11.960938 -16.851562 11.644531 -16.835938 11.445312 -16.820312 L 11.445312 -18.898438 L 17.574219 -18.898438 L 17.574219 -17.117188 C 17.160156 -17.0625 16.75 -16.917969 16.347656 -16.683594 C 15.941406 -16.449219 15.53125 -16.121094 15.117188 -15.699219 C 14.703125 -15.273438 14.253906 -14.730469 13.769531 -14.066406 L 11.175781 -10.527344 C 11.753906 -9.808594 12.320312 -9.089844 12.878906 -8.367188 C 13.433594 -7.648438 13.996094 -6.929688 14.5625 -6.210938 C 15.132812 -5.488281 15.695312 -4.769531 16.25 -4.050781 C 16.558594 -3.671875 16.835938 -3.3125 17.089844 -2.96875 C 17.339844 -2.628906 17.53125 -2.304688 17.65625 -1.996094 C 17.960938 -2.035156 18.175781 -2.054688 18.304688 -2.066406 C 18.429688 -2.074219 18.582031 -2.078125 18.761719 -2.078125 L 18.761719 0 L 10.691406 0 L 10.691406 -1.78125 C 11.355469 -1.78125 11.789062 -1.863281 11.984375 -2.023438 C 12.183594 -2.1875 12.234375 -2.40625 12.136719 -2.6875 C 12.035156 -2.964844 11.851562 -3.277344 11.582031 -3.617188 C 11.132812 -4.195312 10.675781 -4.773438 10.21875 -5.359375 C 9.757812 -5.945312 9.296875 -6.523438 8.828125 -7.101562 C 8.433594 -6.558594 8.035156 -6.015625 7.640625 -5.464844 C 7.242188 -4.917969 6.847656 -4.375 6.453125 -3.832031 C 6.074219 -3.328125 5.785156 -2.953125 5.589844 -2.699219 C 5.390625 -2.449219 5.183594 -2.214844 4.96875 -1.996094 C 5.273438 -2.015625 5.625 -2.035156 6.019531 -2.050781 C 6.417969 -2.070312 6.703125 -2.078125 6.882812 -2.078125 L 6.882812 0 Z M 0.945312 0 "/></g></svg>
+          </div>
+          <div class="s-title">
+            <h1>COTIZACIÓN</h1>
+            <p id="q-date"></p>
+            <p id="q-phone"></p>
+            <p id="q-ig"></p>
+            <p id="q-loc"></p>
+          </div>
+        </div>
+        <div class="s-client">
+          <div class="c-lbl">Cliente:</div>
+          <input class="cname" id="q-client" type="text" placeholder="NOMBRE DEL CLIENTE">
+          <div class="s-meta">
+            <span>Entrega estimada:</span><input id="q-deliv" type="text" placeholder="por definir" size="18">
+            <span>·</span><span id="q-valid"></span>
+          </div>
+        </div>
+        <div class="s-items">
+          <table class="qt">
+            <thead><tr><th style="width:26%">Artículo</th><th class="c">Características</th><th class="c">Cantidad</th><th class="c">Precio unit.</th><th class="c">Total</th><th class="no-print"></th></tr></thead>
+            <tbody id="q-body"></tbody>
+          </table>
+          <div class="totals">
+            <span>Subtotal</span><span id="q-sub">$0.00</span>
+            <span id="q-disc-row-l" hidden>Descuento (<span id="q-disc-pct">0</span>%)</span><span id="q-disc-v" hidden>-$0.00</span>
+            <div class="rule"></div>
+            <span class="gt">Total</span><span class="gt" id="q-total">$0.00</span>
+          </div>
+        </div>
+        <div style="height:40px"></div>
+        <div class="s-foot">
+          <div>
+            <h2>¡Gracias!</h2>
+            <ul id="q-terms"></ul>
+          </div>
+          <div class="vr"></div>
+          <div class="pay">
+            <p>Páguese a<br><span id="q-payee"></span></p>
+            <p>Métodos de pago:<br><span id="q-methods"></span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div id="wa-pane" hidden>
+      <div class="wa-grid">
+        <div class="panel wa-ctl">
+          <div><label for="wa-client">Cliente</label><input id="wa-client" type="text" placeholder="Nombre (opcional)" autocomplete="off"></div>
+          <div><span class="flabel">Formas de pago a incluir</span>
+            <label class="chk"><input type="checkbox" id="wp-pm" data-pay="pm"> Pago móvil <small>(en Bs)</small></label>
+            <label class="chk"><input type="checkbox" id="wp-bin" data-pay="bin"> Binance</label>
+            <label class="chk"><input type="checkbox" id="wp-zin" data-pay="zin"> Zinli</label>
+            <label class="chk"><input type="checkbox" id="wp-fb" data-pay="fb"> Facebank</label>
+            <label class="chk"><input type="checkbox" id="wp-ef" data-pay="ef"> Efectivo</label>
+          </div>
+          <div><label class="chk"><input type="checkbox" id="wa-adv"> Pedir anticipo <small id="wa-adv-pct"></small></label></div>
+          <div class="hint" id="wa-rate"></div>
+          <div class="hint">Los datos de pago se cambian en Ajustes → Datos de pago.</div>
+        </div>
+        <div class="panel wa-out">
+          <div class="wa-bar"><span class="flabel">Mensaje</span><button class="btn" id="btn-wacopy" type="button">Copiar mensaje</button></div>
+          <textarea id="wa-text" rows="22" spellcheck="false"></textarea>
+          <div class="hint">Puedes retocar el texto antes de copiarlo. Si cambias la cotización, el mensaje se vuelve a generar.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section class="tabpane" id="tab-set" hidden>
+    <h2 class="ph">Ajustes</h2>
+    <p class="lede">Cada cambio se guarda solo en este navegador y recalcula al instante.</p>
+    <div class="grid2">
+      <div class="panel set">
+        <h3>Materiales ($ por kg)</h3>
+        <div id="mats"></div>
+        <button class="btn ghost small" id="btn-addmat" type="button">+ Agregar material</button>
+      </div>
+      <div class="panel set">
+        <h3>Costos de producción</h3>
+        <div class="fields">
+          <div><label for="s-hora">Máquina ($/hora)</label><input id="s-hora" type="number" step="0.01" data-k="hora"></div>
+          <div><label for="s-desp">Desperdicio (%)</label><input id="s-desp" type="number" step="1" data-k="desp"></div>
+          <div><label for="s-despon">Desperdicio aplica a</label><select id="s-despon" data-k="despOn"><option value="mat">Solo material</option><option value="matmaq">Material + máquina</option></select></div>
+          <div><label for="s-empbase">Empaque base ($)</label><input id="s-empbase" type="number" step="0.25" data-k="empBase"><div class="hint">Valor con el que arranca la calculadora</div></div>
+          <div><label for="s-empmode">Empaque</label><select id="s-empmode" data-k="empMode"><option value="final">Sumar al precio final (sin ganancia)</option><option value="costo">Sumar al costo (lleva ganancia)</option></select></div>
+          <div style="grid-column:1/-1"><label for="s-modmode">Costo del modelo 3D</label><select id="s-modmode" data-k="modMode"><option value="final">Sumar al precio final (sin ganancia)</option><option value="costo">Sumar al costo (lleva ganancia y dif. cambiaria)</option></select></div>
+          <div style="grid-column:1/-1"><label for="s-extmode">Herrajes / piezas extra</label><select id="s-extmode" data-k="extMode"><option value="costo">Sumar al costo (llevan ganancia y dif. cambiaria)</option><option value="final">Sumar al precio final (sin ganancia)</option></select></div>
+          <div><label for="s-impc">Costo de impresora ($)</label><input id="s-impc" type="number" step="1" data-k="impCost"></div>
+          <div><label for="s-impe">Envío de impresora ($)</label><input id="s-impe" type="number" step="0.01" data-k="impEnv"></div>
+          <div><label for="s-vida">Vida útil (años)</label><input id="s-vida" type="number" step="0.5" data-k="vida"></div>
+          <div><label>Desgaste por pieza</label><div class="formula" id="dep-out" style="padding:10px 12px"></div><div class="hint">(costo + envío) ÷ (años × 365)</div></div>
+        </div>
+      </div>
+      <div class="panel set">
+        <h3>Precio de venta</h3>
+        <div class="fields">
+          <div><label for="s-margen">Ganancia (%)</label><input id="s-margen" type="number" step="1" data-k="margen"></div>
+          <div><label for="s-fx">Diferencia cambiaria (%)</label><input id="s-fx" type="number" step="1" data-k="fx"></div>
+          <div><label for="s-extra">Otros fijos ($/pieza)</label><input id="s-extra" type="number" step="0.01" data-k="extra"><div class="hint">Empaque, ensamblaje, etc. Se suma después del margen.</div></div>
+          <div><label for="s-red">Redondeo hacia arriba</label><select id="s-red" data-k="red"><option value="0">Sin redondeo</option><option value="0.5">Al $0.50</option><option value="1">Al $1</option><option value="5">Al $5</option></select></div>
+          <div><label for="s-mlc">Comisión Mercado Libre (%)</label><input id="s-mlc" type="number" step="0.1" data-k="mlc"></div>
+          <div><label for="s-mle">Envío Mercado Libre ($)</label><input id="s-mle" type="number" step="0.01" data-k="mle"></div>
+          <div style="grid-column:1/-1"><label for="s-mlmode">Fórmula Mercado Libre</label><select id="s-mlmode" data-k="mlMode"><option value="excel">Como en tu Excel: precio × (1 + comisión) + envío</option><option value="exacto">Exacta: (precio + envío) ÷ (1 − comisión)</option></select></div>
+        </div>
+      </div>
+      <div class="panel set">
+        <h3>Tasa de cambio (bolívares)</h3>
+        <div class="fields">
+          <div style="grid-column:1/-1"><label for="s-ratemode">Origen de la tasa</label><select id="s-ratemode" data-k="rateMode"><option value="auto">Automática: BCV vía DolarApi</option><option value="manual">Manual: la escribo yo</option></select></div>
+          <div><label for="s-rusd">Tasa dólar manual (Bs)</label><input id="s-rusd" type="number" step="0.0001" data-k="rateUsd"></div>
+          <div><label for="s-reur">Tasa euro manual (Bs)</label><input id="s-reur" type="number" step="0.0001" data-k="rateEur"></div>
+        </div>
+        <div class="hint">La tasa manual solo se usa si eliges "Manual". La automática se consulta cada vez que abres la calculadora.</div>
+      </div>
+      <div class="panel set">
+        <h3>Datos de pago (WhatsApp)</h3>
+        <div class="fields">
+          <div><label for="s-pmbanco">Pago móvil: banco</label><input id="s-pmbanco" type="text" data-k="pmBanco" placeholder="Ej: Banesco (0134)"></div>
+          <div><label for="s-pmtel">Pago móvil: teléfono</label><input id="s-pmtel" type="text" data-k="pmTel" placeholder="0412-0000000"></div>
+          <div><label for="s-pmci">Pago móvil: cédula</label><input id="s-pmci" type="text" data-k="pmCi" placeholder="V-00000000"></div>
+          <div><label for="s-bin">Binance: correo</label><input id="s-bin" type="text" data-k="binEmail"></div>
+          <div><label for="s-zin">Zinli: correo</label><input id="s-zin" type="text" data-k="zinEmail"></div>
+          <div><label for="s-fbc">Facebank: número de cuenta</label><input id="s-fbc" type="text" data-k="fbCuenta"></div>
+          <div><label for="s-fbt">Facebank: titular</label><input id="s-fbt" type="text" data-k="fbTitular" placeholder="Opcional"></div>
+          <div style="grid-column:1/-1"><label for="s-waintro">Saludo del mensaje</label><input id="s-waintro" type="text" data-k="waIntro"><div class="hint">{cliente} se reemplaza por el nombre si lo escribes.</div></div>
+          <div style="grid-column:1/-1"><label for="s-waoutro">Cierre del mensaje</label><textarea id="s-waoutro" rows="2" data-k="waOutro"></textarea></div>
+        </div>
+      </div>
+      <div class="panel set">
+        <h3>Datos de la cotización</h3>
+        <div class="fields">
+          <div><label for="s-phone">Teléfono</label><input id="s-phone" type="text" data-k="phone"></div>
+          <div><label for="s-ig">Instagram</label><input id="s-ig" type="text" data-k="ig"></div>
+          <div><label for="s-loc">Ubicación</label><input id="s-loc" type="text" data-k="loc"></div>
+          <div><label for="s-payee">Páguese a</label><input id="s-payee" type="text" data-k="payee"></div>
+          <div><label for="s-valid">Vigencia (días)</label><input id="s-valid" type="number" step="1" data-k="validDays"></div>
+          <div><label for="s-adv">Anticipo (%)</label><input id="s-adv" type="number" step="1" data-k="adv"></div>
+          <div style="grid-column:1/-1"><label for="s-methods">Métodos de pago (uno por línea)</label><textarea id="s-methods" rows="4" data-k="methods"></textarea></div>
+          <div style="grid-column:1/-1"><label for="s-terms">Condiciones (una por línea)</label><textarea id="s-terms" rows="6" data-k="terms"></textarea><div class="hint">{anticipo} y {monto} se reemplazan por el % y el monto del anticipo.</div></div>
+        </div>
+      </div>
+      <div class="panel set" style="grid-column:1/-1">
+        <h3>Cómo se calcula</h3>
+        <div class="formula" id="formula"></div>
+        <div style="margin-top:12px"><button class="btn ghost small" id="btn-reset" type="button">Restaurar valores por defecto</button> <span class="hint" id="reset-msg"></span></div>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULTS={
+  mats:[{n:'PLA',p:25},{n:'PETG',p:35},{n:'TPU',p:45},{n:'ABS',p:30},{n:'ASA',p:30}],
+  hora:0.60, impCost:600, impEnv:376.67, vida:5, desp:20, despOn:'mat', margen:50, fx:17, extra:0, red:'0', mlc:9, mle:1, mlMode:'excel',
+  phone:'', ig:'@makerboxve', loc:'Los Teques, Venezuela', payee:'',
+  validDays:30, adv:50, extMode:'costo', modMode:'final', rateMode:'auto', rateUsd:0, rateEur:0, empBase:1, empMode:'final',
+  pmBanco:'', pmTel:'', pmCi:'', binEmail:'', zinEmail:'', fbCuenta:'', fbTitular:'', waPay:['pm','bin','zin','fb'],
+  waIntro:'Hola{cliente}, aquí tienes la cotización de tu pedido:', waOutro:'Cuando hagas el pago, envíame el comprobante por aquí y confirmo tu pedido. ¡Gracias por tu compra!',
+  methods:'Pago móvil\nZinli\nBinance\nEfectivo',
+  terms:'Para iniciar los trabajos se debe cancelar el {anticipo}% del monto ({monto}). El resto se cancela al momento de la entrega.\nEl monto acordado en $ es referencial.\nEsta cotización tiene una vigencia de {vigencia} días.\nUna vez definidos los modelos no se aceptan cambios de último momento, ya que generan costos adicionales.\nLos colores pueden variar levemente según el filamento disponible.'
+};
+const LS_S='makerbox_calc_settings_v2', LS_Q='makerbox_calc_quote_v1';
+const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}};
+const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+let S=Object.assign(structuredClone(DEFAULTS),load(LS_S,{}));
+let Q=Object.assign({client:'',deliv:'',disc:0,items:[]},load(LS_Q,{}));
+const $=id=>document.getElementById(id);
+const money=v=>'$'+(Math.round(v*100)/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0};
+function parseHours(t){t=String(t).trim();if(t.includes(':')){const[h,m]=t.split(':');return num(h)+num(m)/60}return num(t)}
+function roundUp(v,step){step=num(step);if(!step)return v;return Math.ceil((v-1e-9)/step)*step}
+
+const depVal=()=>(num(S.impCost)+num(S.impEnv))/(Math.max(num(S.vida),0.01)*365);
+function calc(h,g,matName,modelo,ext,n,emp){
+  const mat=S.mats.find(m=>m.n===matName)||S.mats[0]||{p:0};
+  n=Math.max(1,Math.round(num(n)));modelo=num(modelo);ext=num(ext);
+  const extCost=S.extMode==='final'?0:ext, extFinal=S.extMode==='final'?ext:0;
+  const modCost=S.modMode==='costo'?modelo:0, modFinal=S.modMode==='costo'?0:modelo;
+  emp=num(emp);const empCost=S.empMode==='costo'?emp:0, empFinal=S.empMode==='costo'?0:emp;
+  const material=g*num(mat.p)/1000;
+  const maquina=h*num(S.hora);
+  const d=num(S.desp)/100;
+  const desperdicio=S.despOn==='matmaq'?(material+maquina)*d:material*d;
+  const dep=depVal();
+  const produccion=material+desperdicio+maquina+modCost+extCost+empCost+dep;
+  const ganancia=produccion*num(S.margen)/100;
+  const fx=(produccion+ganancia)*num(S.fx)/100;
+  const extra=num(S.extra);
+  const totalRaw=produccion+ganancia+fx+extFinal+modFinal+empFinal+extra*n;
+  const raw=totalRaw/n;
+  const precioTotal=roundUp(totalRaw,S.red);
+  const precio=precioTotal/n;
+  const mlc=num(S.mlc)/100;
+  const mlTotRaw=S.mlMode==='exacto'?(totalRaw+num(S.mle)*n)/(1-mlc):totalRaw*(1+mlc)+num(S.mle)*n;
+  const mlTotal=roundUp(mlTotRaw,S.red);
+  const ml=mlTotal/n;
+  const costoPieza=(produccion+extFinal+modFinal+empFinal)/n+extra;
+  const gan=precio-costoPieza;
+  return {empCost,empFinal,modCost,modFinal,precioTotal,mlTotal,mat,n,material,maquina,desperdicio,dep,modelo,ext,extCost,extFinal,produccion,ganancia,fx,extra,totalRaw,raw,precio,ml,gan,costoPieza};
+}
+
+function renderMatSelect(){
+  const sel=$('in-m'),cur=sel.value;
+  sel.innerHTML=S.mats.map(m=>`<option>${esc(m.n)}</option>`).join('');
+  if(S.mats.some(m=>m.n===cur))sel.value=cur;
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+let last=null;
+function update(){
+  const h=parseHours($('in-h').value),g=num($('in-g').value);
+  const r=calc(h,g,$('in-m').value,$('in-mod').value,$('in-ext').value,$('in-n').value,$('in-emp').value);last=r;
+  const multi=r.n>1;
+  $('o-lbl').textContent=multi?`Precio por pieza (${r.n} en la placa)`:'Precio venta directa';
+  $('o-price').textContent=money(r.precio);
+  $('o-ml').textContent=money(r.ml);
+  $('o-gan').textContent=money(r.gan);
+  $('o-raw').textContent=money(multi?r.precioTotal:r.raw);
+  $('o-raw-l').textContent=multi?`Total placa (${r.n} piezas)`:'Sin redondeo';
+  $('o-ml-l').textContent=multi?'Mercado Libre por pieza':'Mercado Libre';
+  $('o-gan-l').textContent=multi?'Tu ganancia por pieza':'Tu ganancia (directo)';
+  const rows=[
+    [`Material <small>${g} g × $${num(r.mat.p).toFixed(2)}/kg</small>`,r.material],
+    [`Desperdicio <small>${S.desp}% ${S.despOn==='matmaq'?'mat.+máq.':'del material'}</small>`,r.desperdicio],
+    [`Máquina <small>${h.toFixed(2)} h × $${num(S.hora).toFixed(2)}</small>`,r.maquina],
+    ...(r.modCost?[['Costo del modelo 3D',r.modCost]]:[]),
+    ...(r.extCost?[['Herrajes / piezas extra',r.extCost]]:[]),
+    ...(r.empCost?[['Empaque',r.empCost]]:[]),
+    [`Desgaste de impresora <small>$${(num(S.impCost)+num(S.impEnv)).toFixed(0)} ÷ ${S.vida} años ÷ 365</small>`,r.dep],
+    [`<b>Costo de producción${multi?' (placa)':''}</b>`,r.produccion],
+    [`Ganancia <small>${S.margen}%</small>`,r.ganancia],
+    [`Diferencia cambiaria <small>${S.fx}%</small>`,r.fx],
+  ];
+  if(r.empFinal)rows.push(['Empaque <small>sin ganancia</small>',r.empFinal]);
+  if(r.modFinal)rows.push(['Costo del modelo 3D <small>sin ganancia</small>',r.modFinal]);
+  if(r.extFinal)rows.push(['Herrajes / piezas extra <small>sin ganancia</small>',r.extFinal]);
+  if(r.extra)rows.push([`Otros fijos <small>$${r.extra.toFixed(2)} × ${r.n}</small>`,r.extra*r.n]);
+  let foot=`<tr class="tot"><td>Precio calculado${multi?' (placa)':''}</td><td>${money(r.totalRaw)}</td></tr>`;
+  if(S.red!=='0'&&num(S.red))foot+=`<tr class="tot"><td>Redondeado al $${S.red}${multi?' (placa)':''}</td><td>${money(r.precioTotal)}</td></tr>`;
+  if(multi)foot+=`<tr class="tot"><td>Por pieza <small>${money(r.precioTotal)} ÷ ${r.n}</small></td><td>${money(r.precio)}</td></tr>`;
+  $('o-bd').innerHTML=rows.map(([a,b])=>`<tr><td>${a}</td><td>${money(b)}</td></tr>`).join('')+foot;
+  renderBs();
+}
+
+// ---- Ajustes
+function renderMats(){
+  $('mats').innerHTML=S.mats.map((m,i)=>`<div class="mat-row"><input aria-label="Material" id="mn-${i}" value="${esc(m.n)}" data-i="${i}" data-f="n"><div class="unit"><input aria-label="Precio por kg" id="mp-${i}" type="number" step="0.5" value="${m.p}" data-i="${i}" data-f="p"><span>$/kg</span></div><button class="icon-btn" type="button" title="Quitar" data-del="${i}">✕</button></div>`).join('');
+}
+$('mats').addEventListener('input',e=>{const t=e.target;if(t.dataset.i==null)return;S.mats[t.dataset.i][t.dataset.f]=t.dataset.f==='p'?num(t.value):t.value;persist();renderMatSelect();update()});
+$('mats').addEventListener('click',e=>{const i=e.target.dataset.del;if(i==null)return;S.mats.splice(i,1);persist();renderMats();renderMatSelect();update()});
+$('btn-addmat').onclick=()=>{S.mats.push({n:'Nuevo',p:30});persist();renderMats();renderMatSelect();update()};
+function fillSettings(){document.querySelectorAll('#tab-set [data-k]').forEach(el=>{el.value=S[el.dataset.k]})}
+document.querySelectorAll('#tab-set [data-k]').forEach(el=>el.addEventListener('input',()=>{const k=el.dataset.k;S[k]=(el.type==='number')?num(el.value):el.value;persist();update();renderFormula();renderQuote()}));
+function persist(){save(LS_S,S)}
+let resetArm=false;
+$('btn-reset').onclick=()=>{
+  if(!resetArm){resetArm=true;$('reset-msg').textContent='Pulsa otra vez para confirmar';setTimeout(()=>{resetArm=false;$('reset-msg').textContent=''},4000);return}
+  S=structuredClone(DEFAULTS);persist();fillSettings();renderMats();renderMatSelect();update();renderFormula();renderQuote();resetArm=false;$('reset-msg').textContent='';toast('Valores restaurados')};
+function renderFormula(){
+  const w=S.despOn==='matmaq'?'(material + máquina)':'material';
+  $('formula').innerHTML=`material = gramos × $/kg ÷ 1000<br>desperdicio = ${w} × ${S.desp}%<br>máquina = horas × $${num(S.hora).toFixed(2)}<br>producción = material + desperdicio + máquina${S.modMode==='costo'?' + modelo 3D':''}${S.empMode==='costo'?' + empaque':''}${S.extMode==='final'?'':' + herrajes'} + $${depVal().toFixed(2)} desgaste<br>total placa = [producción × (1 + ${S.margen}%) × (1 + ${S.fx}%)${S.extMode==='final'?' + herrajes':''}${S.modMode==='costo'?'':' + modelo 3D'}${S.empMode==='costo'?'':' + empaque'}] + $${num(S.extra).toFixed(2)} otros fijos × piezas <br>el redondeo (${S.red==='0'?'ninguno':'al $'+S.red}) se aplica al total de la placa y luego se divide entre las piezas<br>Mercado Libre (placa) = ${S.mlMode==='exacto'?`(total sin redondeo + $${num(S.mle).toFixed(2)} envío × piezas) ÷ (1 − ${S.mlc}%)`:`total sin redondeo × (1 + ${S.mlc}%) + $${num(S.mle).toFixed(2)} envío × piezas`}, redondeado y dividido entre las piezas`;
+  $('dep-out').textContent=money(depVal());
+}
+
+// ---- Cotización
+function persistQ(){save(LS_Q,Q)}
+$('btn-add').onclick=()=>{
+  if(!last)return;
+  const name=$('in-name').value.trim()||'Pieza impresa en 3D';
+  const qty=Math.max(1,Math.round(num($('in-qty').value)));
+  const price=$('in-pricekind').value==='ml'?last.ml:last.precio;
+  Q.items.push({a:name,c:`Impresión 3D\nMaterial ${last.mat.n}`,q:qty,p:price,lot:true,tot:price*qty});
+  persistQ();renderQuote();$('in-name').value='';toast('Agregado a la cotización');
+};
+$('btn-additem').onclick=()=>{Q.items.push({a:'',c:'Impresión 3D',q:1,p:0});persistQ();renderQuote()};
+let clearArm=false;
+$('btn-clear').onclick=()=>{
+  if(!clearArm){clearArm=true;$('btn-clear').textContent='¿Borrar todo? Pulsa otra vez';setTimeout(()=>{clearArm=false;$('btn-clear').textContent='Nueva cotización'},4000);return}
+  Q={client:'',deliv:'',disc:0,items:[]};persistQ();renderQuote();clearArm=false;$('btn-clear').textContent='Nueva cotización'};
+$('btn-print').onclick=()=>window.print();
+function fmtDate(d){return d.toLocaleDateString('es-VE',{day:'numeric',month:'long',year:'numeric'}).replace(/ de (\d{4})/,' de $1')}
+function autoH(t){t.style.height='auto';t.style.height=t.scrollHeight+'px'}
+function renderQuote(){
+  const today=new Date();
+  $('q-date').textContent=fmtDate(today);
+  $('q-phone').textContent=S.phone;$('q-ig').textContent=S.ig;$('q-loc').textContent=S.loc;
+  const v=new Date(today);v.setDate(v.getDate()+Math.round(num(S.validDays)));
+  $('q-valid').textContent='Vigencia de la cotización: hasta el '+fmtDate(v);
+  $('q-client').value=Q.client;$('q-deliv').value=Q.deliv;$('q-disc').value=Q.disc;
+  const body=$('q-body');
+  body.innerHTML=Q.items.length?Q.items.map((it,i)=>`<tr>
+    <td class="art"><textarea id="qa-${i}" rows="1" data-i="${i}" data-f="a" placeholder="ARTÍCULO">${esc(it.a)}</textarea></td>
+    <td class="car"><textarea id="qc-${i}" rows="2" data-i="${i}" data-f="c">${esc(it.c)}</textarea></td>
+    <td class="num"><input id="qq-${i}" type="number" min="1" value="${it.q}" data-i="${i}" data-f="q"></td>
+    <td class="pr"><input id="qp-${i}" type="text" inputmode="decimal" value="${money(it.p)}" data-i="${i}" data-f="p"></td>
+    <td class="lt" id="qt-${i}">${money(num(it.q)*num(it.p))}</td>
+    <td class="del no-print"><button type="button" data-qdel="${i}" title="Quitar línea">✕</button></td></tr>`).join('')
+    :`<tr><td colspan="6" class="empty-q">Sin artículos. Agrégalos desde la pestaña Calcular o con “+ Línea manual”.</td></tr>`;
+  body.querySelectorAll('td.art textarea').forEach(autoH);
+  body.querySelectorAll('td.car textarea').forEach(t=>{t.value=t.value.split('\n').map(l=>l.replace(/^•\s*/,'')).join('\n');bulletize(t);autoH(t)});
+  $('qcount').textContent=Q.items.length?`(${Q.items.length})`:'';
+  totals();
+}
+function bulletize(t){t.value=t.value.split('\n').map(l=>l.trim()?('• '+l.replace(/^•\s*/,'')):l).join('\n')}
+function totals(){
+  Q.items.forEach((it,i)=>{const c=$('qt-'+i);if(c)c.textContent=money(num(it.q)*num(it.p))});
+  const sub=Q.items.reduce((s,it)=>s+num(it.q)*num(it.p),0);
+  const disc=sub*num(Q.disc)/100,tot=sub-disc;
+  $('q-sub').textContent=money(sub);$('q-disc-v').textContent='-'+money(disc);$('q-total').textContent=money(tot);
+  const showDisc=num(Q.disc)>0;
+  $('q-disc-row-l').hidden=$('q-disc-v').hidden=!showDisc;
+  $('q-disc-pct').textContent=num(Q.disc);
+  const adv=num(S.adv);
+  $('q-terms').innerHTML=String(S.terms).split('\n').filter(l=>l.trim()).map(l=>`<li>${esc(l.replace(/\{anticipo\}/g,adv).replace(/\{monto\}/g,money(tot*adv/100)).replace(/\{vigencia\}/g,Math.round(num(S.validDays))))}</li>`).join('');
+  $('q-payee').textContent=S.payee;
+  $('q-methods').innerHTML=String(S.methods).split('\n').filter(l=>l.trim()).map(esc).join('<br>');
+  if(typeof renderWA==='function'&&$('wa-text'))renderWA();
+}
+$('q-body').addEventListener('input',e=>{const t=e.target,i=t.dataset.i;if(i==null)return;const f=t.dataset.f;
+  if(f==='c'){Q.items[i].c=t.value.split('\n').map(l=>l.replace(/^•\s*/,'')).join('\n');autoH(t)}
+  else if(f==='p'){const it=Q.items[i];it.p=num(t.value.replace(/[$,\s]/g,''));if(it.lot)it.tot=num(it.q)*it.p}
+  else if(f==='q'){const it=Q.items[i];it.q=num(t.value);if(it.lot&&it.q>0){it.p=it.tot/it.q;const pi=$('qp-'+i);if(pi&&document.activeElement!==pi)pi.value=money(it.p)}}
+  else {Q.items[i][f]=t.value;if(t.tagName==='TEXTAREA')autoH(t)}
+  persistQ();totals()});
+$('q-body').addEventListener('focusout',e=>{const t=e.target;if(t.dataset.f==='p')t.value=money(Q.items[t.dataset.i].p);if(t.dataset.f==='c')bulletize(t)});
+$('q-body').addEventListener('click',e=>{const i=e.target.dataset.qdel;if(i==null)return;Q.items.splice(i,1);persistQ();renderQuote()});
+$('q-client').addEventListener('input',e=>{Q.client=e.target.value;persistQ();renderWA()});
+$('q-deliv').addEventListener('input',e=>{Q.deliv=e.target.value;persistQ();renderWA()});
+$('q-disc').addEventListener('input',e=>{Q.disc=num(e.target.value);persistQ();totals()});
+
+// ---- Bolívares
+const LS_R='makerbox_calc_rates_v1';
+const API_USD='https://ve.dolarapi.com/v1/dolares/oficial', API_EUR='https://ve.dolarapi.com/v1/euros/oficial';
+let RATES=load(LS_R,null), rateState='loading';
+const bs=v=>'Bs '+(Math.round(v*100)/100).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const rt=v=>num(v).toLocaleString('es-VE',{minimumFractionDigits:2,maximumFractionDigits:4});
+function fDate(iso){const d=new Date(iso);if(isNaN(d))return '';return d.toLocaleDateString('es-VE',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+function curRates(){
+  if(S.rateMode==='manual')return {usd:num(S.rateUsd),eur:num(S.rateEur),manual:true};
+  return RATES?{usd:num(RATES.usd),eur:num(RATES.eur)}:null;
+}
+async function fetchRates(){
+  rateState='loading';renderBs();
+  const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),10000);
+  const get=u=>fetch(u,{signal:ctl.signal,cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+  try{
+    const [u,e]=await Promise.all([get(API_USD),get(API_EUR)]);
+    if(!num(u.promedio)||!num(e.promedio))throw new Error('sin datos');
+    RATES={usd:num(u.promedio),eur:num(e.promedio),fUsd:u.fechaActualizacion,fEur:e.fechaActualizacion,at:Date.now()};
+    save(LS_R,RATES);rateState='ok';
+  }catch(err){rateState='error'}
+  clearTimeout(to);renderBs();
+}
+function renderBs(){
+  if(!last||!$('bs-usd'))return;
+  const r=curRates();const multi=last.n>1;
+  const set=(id,txt)=>{$(id).textContent=txt};
+  if(r&&r.usd){set('bs-usd',bs(last.precio*r.usd));set('bs-usd-r',`Tasa: ${rt(r.usd)} Bs/$`);set('bs-usd-t',multi?`Placa: ${bs(last.precioTotal*r.usd)}`:'')}
+  else{set('bs-usd','Bs –');set('bs-usd-r','Tasa: –');set('bs-usd-t','')}
+  if(r&&r.eur){set('bs-eur',bs(last.precio*r.eur));set('bs-eur-r',`Tasa: ${rt(r.eur)} Bs/€`);set('bs-eur-t',multi?`Placa: ${bs(last.precioTotal*r.eur)}`:'')}
+  else{set('bs-eur','Bs –');set('bs-eur-r','Tasa: –');set('bs-eur-t','')}
+  const m=num($('in-usdman').value);
+  set('bs-m-usd',r&&r.usd?bs(m*r.usd):'Bs –');set('bs-m-eur',r&&r.eur?bs(m*r.eur):'Bs –');
+  const d=$('bs-date');d.classList.remove('warn');
+  if(S.rateMode==='manual'){d.textContent='Tasa manual (escrita en Ajustes)';if(!r.usd||!r.eur){d.textContent+=': falta completar la tasa en Ajustes';d.classList.add('warn')}return}
+  if(!RATES){d.textContent=rateState==='loading'?'Consultando la tasa del BCV…':'No se pudo consultar la tasa y no hay una guardada. Revisa tu conexión o usa la tasa manual en Ajustes.';if(rateState==='error')d.classList.add('warn');return}
+  const fu=fDate(RATES.fUsd),fe=fDate(RATES.fEur);
+  let txt=fu===fe?`Tasa BCV del ${fu}`:`Tasa BCV: dólar del ${fu} · euro del ${fe}`;
+  const hora=new Date(RATES.at).toLocaleString('es-VE',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  if(rateState==='loading')txt+=' · actualizando…';
+  else if(rateState==='error'){txt+=` · sin conexión, usando la tasa guardada (consultada el ${hora})`;d.classList.add('warn')}
+  else txt+=` · consultada ${hora}`;
+  d.textContent=txt;
+}
+const _rbs=renderBs;renderBs=function(){_rbs();try{renderWA()}catch(e){}};
+$('in-usdman').addEventListener('input',renderBs);
+$('btn-rate').onclick=fetchRates;
+
+// ---- WhatsApp
+const PAYS={pm:'Pago móvil',bin:'Binance',zin:'Zinli',fb:'Facebank',ef:'Efectivo'};
+let waAdv=false;
+function waMoney(v){return '$'+(Math.round(v*100)/100).toFixed(2)}
+function renderWA(){
+  if(!$('wa-text'))return;
+  const sub=Q.items.reduce((s,it)=>s+num(it.q)*num(it.p),0);
+  const disc=sub*num(Q.disc)/100,tot=sub-disc;
+  const adv=num(S.adv);const pay=waAdv?tot*adv/100:tot;
+  const r=curRates();const usd=r&&r.usd?r.usd:0;
+  document.querySelectorAll('[data-pay]').forEach(c=>{c.checked=(S.waPay||[]).includes(c.dataset.pay)});
+  $('wa-adv').checked=waAdv;$('wa-adv-pct').textContent=`(${adv}%)`;
+  $('wa-client').value=Q.client||'';
+  const L=[];
+  const cli=(Q.client||'').trim();
+  L.push('*COTIZACIÓN MAKERBOX*');
+  L.push(String(S.waIntro||'').replace('{cliente}',cli?' '+cli:''));
+  L.push('');
+  if(!Q.items.length)L.push('_(Agrega productos desde la pestaña Calcular)_');
+  Q.items.forEach(it=>{
+    const q=num(it.q),p=num(it.p),name=(it.a||'Producto').trim();
+    L.push(q>1?`• ${q} × ${name} (${waMoney(p)} c/u): *${waMoney(q*p)}*`:`• ${name}: *${waMoney(p)}*`);
+  });
+  const T=[];
+  if(Q.items.length>=2||disc>0){
+    if(disc>0){T.push(`Subtotal: ${waMoney(sub)}`);T.push(`Descuento (${num(Q.disc)}%): -${waMoney(disc)}`)}
+    T.push(`*TOTAL: ${waMoney(tot)}*`);
+  }
+  if(Q.deliv&&Q.deliv.trim())T.push(`Entrega estimada: ${Q.deliv.trim()}`);
+  if(T.length){L.push('');L.push(...T)}
+  if(waAdv){L.push('');L.push(`Para iniciar tu pedido: *${waMoney(pay)}* (${adv}% de anticipo). El resto se paga al momento de la entrega.`)}
+  const sel=(S.waPay||[]).filter(k=>PAYS[k]);
+  if(sel.length){
+    L.push('');L.push(`*FORMAS DE PAGO*${waAdv?' (monto del anticipo)':''}`);
+    sel.forEach(k=>{
+      L.push('');
+      if(k==='pm'){
+        L.push('*Pago móvil*');
+        L.push(`Banco: ${S.pmBanco||'-'}`);L.push(`Teléfono: ${S.pmTel||'-'}`);L.push(`Cédula: ${S.pmCi||'-'}`);
+        if(usd){L.push(`Monto: *${bs(pay*usd)}*`);L.push(`_Tasa BCV: ${rt(usd)} Bs_`)}else L.push('Monto: _(sin tasa disponible)_');
+      }
+      if(k==='bin'){L.push('*Binance*');L.push(`Correo: ${S.binEmail||'-'}`);L.push(`Monto: *${waMoney(pay)}*`)}
+      if(k==='zin'){L.push('*Zinli*');L.push(`Correo: ${S.zinEmail||'-'}`);L.push(`Monto: *${waMoney(pay)}*`)}
+      if(k==='fb'){L.push('*Facebank*');L.push(`Cuenta: ${S.fbCuenta||'-'}`);if(S.fbTitular)L.push(`Titular: ${S.fbTitular}`);L.push(`Monto: *${waMoney(pay)}*`)}
+      if(k==='ef'){L.push('*Efectivo*');L.push(`Monto: *${waMoney(pay)}*`)}
+    });
+  }
+  if(S.waOutro&&S.waOutro.trim()){L.push('');L.push(S.waOutro.trim())}
+  $('wa-text').value=L.join('\n');
+  const miss=[];if(sel.includes('pm')&&!(S.pmTel&&S.pmCi&&S.pmBanco))miss.push('pago móvil');if(sel.includes('bin')&&!S.binEmail)miss.push('Binance');if(sel.includes('zin')&&!S.zinEmail)miss.push('Zinli');if(sel.includes('fb')&&!S.fbCuenta)miss.push('Facebank');
+  $('wa-rate').textContent=(usd?`Pago móvil calculado a ${rt(usd)} Bs/$.`:'Sin tasa: el monto en Bs no se puede calcular.')+(miss.length?` Faltan datos de ${miss.join(', ')} en Ajustes.`:'');
+}
+document.querySelectorAll('[data-pay]').forEach(c=>c.addEventListener('change',()=>{const k=c.dataset.pay;const s=new Set(S.waPay||[]);c.checked?s.add(k):s.delete(k);S.waPay=Object.keys(PAYS).filter(x=>s.has(x));persist();renderWA()}));
+$('wa-adv').addEventListener('change',e=>{waAdv=e.target.checked;renderWA()});
+$('wa-client').addEventListener('input',e=>{Q.client=e.target.value;persistQ();$('q-client').value=Q.client;renderWA();const t=$('wa-client');})
+$('btn-wacopy').onclick=()=>{
+  const ta=$('wa-text');const txt=ta.value;
+  const done=()=>toast('Mensaje copiado');
+  const fb=()=>{ta.focus();ta.select();try{document.execCommand('copy');done()}catch(e){toast('Selecciónalo y cópialo con Ctrl+C')}};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(done,fb);else fb();
+};
+document.querySelectorAll('.subtabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.subtabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  $('pdf-pane').hidden=b.dataset.sub!=='pdf-pane';$('wa-pane').hidden=b.dataset.sub!=='wa-pane';
+  if(b.dataset.sub==='wa-pane')renderWA();else document.querySelectorAll('#q-body textarea').forEach(autoH);
+});
+
+// ---- Pestañas
+document.querySelectorAll('nav.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
+  document.querySelectorAll('.tabpane').forEach(p=>p.hidden=p.id!==b.dataset.tab);
+  if(b.dataset.tab==='tab-cot')document.querySelectorAll('#q-body textarea').forEach(autoH);
+});
+let tt;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),1600)}
+
+['in-h','in-g','in-m','in-mod','in-ext','in-n','in-emp'].forEach(id=>$(id).addEventListener('input',update));
+$('in-n').addEventListener('input',()=>{$('in-qty').value=Math.max(1,Math.round(num($('in-n').value)))});
+$('in-emp').value=num(S.empBase);
+renderMatSelect();renderMats();fillSettings();renderFormula();update();renderQuote();
+fetchRates();
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
+</script>
+</body>
+</html>
