@@ -1,6 +1,6 @@
 {
   "name": "Calculadora Makerbox",
-  "short_name": "Makerbox",
+  "short_name": "Calculadora Makerbox",
   "description": "Calculadora y cotizador de impresión 3D",
   "start_url": "./",
   "scope": "./",
